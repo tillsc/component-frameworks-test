@@ -1,0 +1,1 @@
+(typeof alert !== "undefined" ? alert : console.error)("ERROR: Error: You must supply output.name for IIFE bundles");

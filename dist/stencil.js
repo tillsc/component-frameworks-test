@@ -1,0 +1,1 @@
+(typeof alert !== "undefined" ? alert : console.error)("ERROR: Error: 'Prop' is not exported by node_modules/@stencil/core/dist/index.js");
