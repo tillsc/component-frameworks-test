@@ -1,9 +1,7 @@
-### usage
+See https://tillsc.github.io/component-frameworks-test/ for results
+
+### Build dist
 
     npm install
 
     ./node_modules/.bin/faucet
-
-Serve `.` with some http server like https://github.com/indexzero/http-server.
-
-E.g. `http-server . -c-1`
