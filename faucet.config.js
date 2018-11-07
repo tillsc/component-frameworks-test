@@ -21,5 +21,8 @@ module.exports = {
     jsx: true,
     externals: { react: "React" }
   },
-  ]
+  {
+    source: "./src/util/size-elem.js",
+    target: "./dist/util/size-elem.js"
+  }]
 };

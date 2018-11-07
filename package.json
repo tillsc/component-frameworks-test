@@ -8,6 +8,7 @@
     "faucet-pipeline-jsx": "^1.0.0",
     "faucet-pipeline-static": "^1.0.0",
     "faucet-pipeline-typescript": "^1.0.0",
+    "pako": "^1.0.6",
     "react": "^16.6.1",
     "react-dom": "^16.6.1"
   }
