@@ -1,0 +1,26 @@
+<html>
+
+<head>
+  <script src="dist/vanilla.js"></script>
+  <script src="dist/polymer3.js"></script>
+  <script src="dist/lit-element.js"></script>
+  <script src="dist/react_shim.js"></script>
+  <script src="dist/react.js"></script>
+  <script src="size-elem.js"></script>
+</head>
+
+<body>
+  <h3>Vanilla (<size-elm src="dist/vanilla.js"></size-elm>)</h3>
+  <vanilla-empty text="Hello from Vanilla JS"></vanilla-empty>
+
+  <h3>Polymer (<size-elm src="dist/polymer3.js"></size-elm>)</h3>
+  <polymer3-empty text="Hello from Polymer 3"></polymer3-empty>
+
+  <h3>Polymer Lit-Element (<size-elm src="dist/lit-element.js"></size-elm>)</h3>
+  <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
+
+  <h3>React (<size-elm src="dist/react.js"></size-elm> + <size-elm src="dist/react_shim.js"></size-elm>)</h3>
+  <react-empty text="Hello from React"></react-empty>
+</body>
+
+</html>
