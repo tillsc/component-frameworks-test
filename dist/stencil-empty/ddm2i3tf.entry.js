@@ -1,0 +1,2 @@
+/*! Built with http://stenciljs.com */
+const{h:t}=window.StencilEmpty;class e{render(){return t("span",null,this.text)}static get is(){return"stencil-empty"}static get encapsulation(){return"shadow"}static get properties(){return{text:{type:String,attr:"text"}}}}export{e as StencilEmpty};
