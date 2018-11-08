@@ -5,7 +5,21 @@ class EmptyComponent extends HTMLElement {
   }
 
   connectedCallback() {
-    this.shadowRoot.textContent = this.getAttribute('text');
+    this.render(this.getAttribute('text'));
+  }
+
+  static get observedAttributes() {
+    return ['text'];
+  }
+
+  attributeChangedCallback(name, _oldValue, newValue) {
+    if (name === 'text') {
+      this.render(newValue);
+    }
+  }
+
+  render(text) {
+    this.shadowRoot.textContent = text;
   }
 }
 
