@@ -1,4 +1,4 @@
-import {LitElement, html} from '@polymer/lit-element';
+import {LitElement, html} from 'lit-element';
 
 class LitElementEmpty extends LitElement {
 
@@ -14,7 +14,10 @@ class LitElementEmpty extends LitElement {
   }
 
   render() {
-    return html`${this.text}`;
+    return html`
+    <style>:host { border: 1px solid red; padding: 0.5em; }</style>
+    ${this.text}
+  `
   }
 
 }

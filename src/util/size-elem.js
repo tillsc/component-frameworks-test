@@ -13,7 +13,6 @@ class SizeElm extends HTMLElement {
 
   connectedCallback() {
     fetch(this.getAttribute('src')).then((response) => {
-      console.log(response)
       return response.text();
     }).then((text) => {
       let zip = pako.gzip(text);

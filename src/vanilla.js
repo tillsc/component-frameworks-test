@@ -1,6 +1,8 @@
 class EmptyComponent extends HTMLElement {
+
   constructor() {
     super();
+    this.styles = ':host { border: 1px solid red; padding: 0.5em; }';
     this.attachShadow({mode: 'open'});
   }
 
@@ -19,7 +21,7 @@ class EmptyComponent extends HTMLElement {
   }
 
   render(text) {
-    this.shadowRoot.textContent = text;
+    this.shadowRoot.innerHTML = `<style>${this.styles}</style>${text}`;
   }
 }
 

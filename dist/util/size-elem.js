@@ -141,6 +141,8 @@ var common_6 = common.Buf32;
 //   misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+/* eslint-disable space-unary-ops */
+
 
 
 /* Public constants ==========================================================*/
@@ -2942,7 +2944,7 @@ function deflate(strm, flush) {
                     (!s.gzhead.extra ? 0 : 4) +
                     (!s.gzhead.name ? 0 : 8) +
                     (!s.gzhead.comment ? 0 : 16)
-                );
+        );
         put_byte(s, s.gzhead.time & 0xff);
         put_byte(s, (s.gzhead.time >> 8) & 0xff);
         put_byte(s, (s.gzhead.time >> 16) & 0xff);
@@ -3451,8 +3453,10 @@ var string2buf = function (str) {
 
 // Helper (used in 2 places)
 function buf2binstring(buf, len) {
-  // use fallback for big arrays to avoid stack overflow
-  if (len < 65537) {
+  // On Chrome, the arguments in a function call that are allowed is `65534`.
+  // If the length of the buffer is smaller than that, we can use this optimization,
+  // otherwise we will take a slower path.
+  if (len < 65534) {
     if ((buf.subarray && STR_APPLY_UIA_OK) || (!buf.subarray && STR_APPLY_OK)) {
       return String.fromCharCode.apply(null, common.shrinkBuf(buf, len));
     }
@@ -6515,6 +6519,22 @@ function Inflate(options) {
   this.header = new gzheader();
 
   inflate_1.inflateGetHeader(this.strm, this.header);
+
+  // Setup dictionary
+  if (opt.dictionary) {
+    // Convert data if needed
+    if (typeof opt.dictionary === 'string') {
+      opt.dictionary = strings.string2buf(opt.dictionary);
+    } else if (toString$1.call(opt.dictionary) === '[object ArrayBuffer]') {
+      opt.dictionary = new Uint8Array(opt.dictionary);
+    }
+    if (opt.raw) { //In raw mode we need to set the dictionary early
+      status = inflate_1.inflateSetDictionary(this.strm, opt.dictionary);
+      if (status !== constants.Z_OK) {
+        throw new Error(messages[status]);
+      }
+    }
+  }
 }
 
 /**
@@ -6551,7 +6571,6 @@ Inflate.prototype.push = function (data, mode) {
   var dictionary = this.options.dictionary;
   var status, _mode;
   var next_out_utf8, tail, utf8str;
-  var dict;
 
   // Flag to properly process Z_BUF_ERROR on testing inflate call
   // when we check that all output data was flushed.
@@ -6583,17 +6602,7 @@ Inflate.prototype.push = function (data, mode) {
     status = inflate_1.inflate(strm, constants.Z_NO_FLUSH);    /* no bad return value */
 
     if (status === constants.Z_NEED_DICT && dictionary) {
-      // Convert data if needed
-      if (typeof dictionary === 'string') {
-        dict = strings.string2buf(dictionary);
-      } else if (toString$1.call(dictionary) === '[object ArrayBuffer]') {
-        dict = new Uint8Array(dictionary);
-      } else {
-        dict = dictionary;
-      }
-
-      status = inflate_1.inflateSetDictionary(this.strm, dict);
-
+      status = inflate_1.inflateSetDictionary(this.strm, dictionary);
     }
 
     if (status === constants.Z_BUF_ERROR && allowBufError === true) {
@@ -6820,7 +6829,6 @@ class SizeElm extends HTMLElement {
 
   connectedCallback() {
     fetch(this.getAttribute('src')).then((response) => {
-      console.log(response);
       return response.text();
     }).then((text) => {
       let zip = pako_1.gzip(text);
