@@ -6,7 +6,7 @@
   <script src="dist/lit-element.js"></script>
   <script src="dist/react_shim.js"></script>
   <script src="dist/react.js"></script>
-  <script src="dist/stencil.js"></script>
+  <script src="dist/stencil/stencil-empty.js"></script>
   <script src="dist/util/size-elem.js"></script>
 </head>
 
@@ -24,11 +24,18 @@
   <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
 
   <h3>Stencil</h3>
-  <p><size-elm src="dist/stencil.js"></size-elm> + <size-elm src="dist/stencil-empty/stencil-empty.k09kolbk.js"></size-elm> + <size-elm src="dist/stencil-empty/ddm2i3tf.entry.js"></size-elm></p>
+  <ul>
+    <li>Loader: <size-elm src="dist/stencil/stencil-empty.js"></size-elm></li>
+    <li>Core: <size-elm src="dist/stencil/stencil-empty/stencil-empty.core.js"></size-elm></li>
+    <li>Entry: <size-elm src="dist/stencil/stencil-empty/stencil-empty.entry.js"></size-elm></li>
+  </ul>
   <stencil-empty text="Hello from Stencil"></stencil-empty>
 
   <h3>React</h3>
-  <p><size-elm src="dist/react.js"></size-elm> + <size-elm src="dist/react_shim.js"></size-elm></p>
+  <ul>
+    <li>Code + React-DOM: <size-elm src="dist/react.js"></size-elm></li>
+    <li>React: <size-elm src="dist/react_shim.js"></size-elm></li>
+  </ul>
   <react-empty text="Hello from React"></react-empty>
 </body>
 

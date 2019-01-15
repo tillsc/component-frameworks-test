@@ -2,7 +2,7 @@ import { Component, Prop } from '@stencil/core';
 
 @Component({
   tag: 'stencil-empty',
- // styleUrl: 'my-first-component.css'
+  styleUrl: 'stencil-empty.css'
 })
 export class StencilComponent {
   @Prop() text: string;

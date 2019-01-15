@@ -1,2 +1,6 @@
 .rpt2_cache
 node_modules
+.stencil
+/dist/stencil/*
+!/dist/stencil/stencil-empty
+!/dist/stencil/stencil-empty.js

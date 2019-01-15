@@ -1,15 +1,20 @@
 {
+  "scripts": {
+    "compile": "./node_modules/.bin/faucet",
+    "watch": "./node_modules/.bin/faucet --watch",
+    "stencil": "./node_modules/.bin/stencil build --config stencil.config.ts"
+  },
   "dependencies": {
-    "@polymer/lit-element": "^0.6.2",
     "@polymer/polymer": "^3.0.0",
-    "@stencil/core": "^0.15.2",
-    "faucet-pipeline-esnext": "^1.0.0",
-    "faucet-pipeline-js": "^1.0.0",
-    "faucet-pipeline-jsx": "^1.0.0",
+    "@stencil/core": "^0.16.3",
+    "faucet-pipeline-esnext": "^1.1.1",
+    "faucet-pipeline-js": "^1.1.1",
+    "faucet-pipeline-jsx": "^1.1.1",
     "faucet-pipeline-static": "^1.0.0",
-    "faucet-pipeline-typescript": "^1.0.0",
-    "pako": "^1.0.6",
-    "react": "^16.6.1",
-    "react-dom": "^16.6.1"
+    "faucet-pipeline-typescript": "^1.1.1",
+    "lit-element": "^2.0.0-rc.2",
+    "pako": "^1.0.8",
+    "react": "^16.7.0",
+    "react-dom": "^16.7.0"
   }
 }
