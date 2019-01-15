@@ -8,6 +8,6 @@ export class StencilComponent {
   @Prop() text: string;
 
   render() {
-    return this.text;
+    return <span class="foo">{this.text}</span>;
   }
 }

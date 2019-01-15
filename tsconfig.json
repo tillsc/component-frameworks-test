@@ -14,5 +14,5 @@
       "moduleResolution": "node",
       "noEmitOnError": false
   },
-  "files": ["src/stencil-empty.ts"]
+  "files": ["src/stencil-empty.tsx"]
 }

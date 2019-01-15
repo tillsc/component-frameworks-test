@@ -1,1 +1,1 @@
-class t{render(){return this.text}static get is(){return"stencil-empty"}static get properties(){return{text:{type:String,attr:"text"}}}static get style(){return":host{border:1px solid red;padding:.5em}"}}export{t as StencilEmpty};
+const t=window.StencilEmpty.h;class e{render(){return t("span",{class:"foo"},this.text)}static get is(){return"stencil-empty"}static get properties(){return{text:{type:String,attr:"text"}}}static get style(){return".foo{border:1px solid red;padding:.5em}"}}export{e as StencilEmpty};
