@@ -4,3 +4,4 @@ node_modules
 /dist/stencil/*
 !/dist/stencil/stencil-empty
 !/dist/stencil/stencil-empty.js
+cli_based_builds/angular/dist
