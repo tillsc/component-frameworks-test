@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "compile": "./node_modules/.bin/faucet",
-    "watch": "./node_modules/.bin/faucet --watch",
-    "stencil": "./node_modules/.bin/stencil build --config stencil.config.ts"
+    "compile": "faucet",
+    "watch": "faucet --watch",
+    "stencil": "stencil build --config stencil.config.ts"
   },
   "dependencies": {
     "@polymer/polymer": "^3.0.0",

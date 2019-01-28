@@ -5739,7 +5739,7 @@ class ReactEmpty extends HTMLElement {
     this.attachShadow({
       mode: 'open'
     }).appendChild(mountPoint);
-    let text = this.getAttribute("text");
+    let text = this.getAttribute('text');
     reactDom_production_min.render(React.createElement(React.Fragment, null, React.createElement("style", null, ":host  ", '{', " border: 1px solid red; padding: 0.5em; ", '}', " "), text), mountPoint);
   }
 
