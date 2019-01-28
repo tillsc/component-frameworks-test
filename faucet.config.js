@@ -22,6 +22,11 @@ module.exports = {
     externals: { react: "React" }
   },
   {
+    source: "./src/preact.jsx",
+    target: "./dist/preact.js",
+    jsx: { pragma: "h" }
+  },
+  {
     source: "./src/util/size-elem.js",
     target: "./dist/util/size-elem.js"
   }]
