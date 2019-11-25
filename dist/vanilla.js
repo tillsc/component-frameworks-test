@@ -21,6 +21,10 @@ class EmptyComponent extends HTMLElement {
     return ['text'];
   }
 
+  foo () {
+
+  }
+
   attributeChangedCallback(name, _oldValue, newValue) {
     if (name === 'text') {
       this.render(newValue);

@@ -39,7 +39,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 */
 
 let CSS_URL_RX = /(url\()([^)]*)(\))/g;
-let ABS_URL = /(^\/)|(^#)|(^[\w-\d]*:)/;
+let ABS_URL = /(^\/[^\/])|(^#)|(^[\w-\d]*:)/;
 let workingURL;
 let resolveDoc;
 /**
@@ -57,6 +57,9 @@ function resolveUrl(url, baseURI) {
   if (url && ABS_URL.test(url)) {
     return url;
   }
+  if (url === '//') {
+    return url;
+  }
   // Lazy feature detection.
   if (workingURL === undefined) {
     workingURL = false;
@@ -72,7 +75,12 @@ function resolveUrl(url, baseURI) {
     baseURI = document.baseURI || window.location.href;
   }
   if (workingURL) {
-    return (new URL(url, baseURI)).href;
+    try {
+      return (new URL(url, baseURI)).href;
+    } catch (e) {
+      // Bad url or baseURI structure. Do not attempt to resolve.
+      return url;
+    }
   }
   // Fallback to creating an anchor into a disconnected document.
   if (!resolveDoc) {
@@ -137,8 +145,7 @@ const useNativeCustomElements = !(window.customElements.polyfillWrapFlushCallbac
  * `rootPath` to provide a stable application mount path when
  * using client side routing.
  */
-let rootPath = undefined ||
-  pathFromUrl(document.baseURI || window.location.href);
+let rootPath = pathFromUrl(document.baseURI || window.location.href);
 
 /**
  * A global callback used to sanitize any value before inserting it into the DOM.
@@ -172,6 +179,21 @@ let strictTemplatePolicy = false;
  * via dom-module, set this flag to true.
  */
 let allowTemplateFromDomModule = false;
+
+/**
+ * Setting to skip processing style includes and re-writing urls in css styles.
+ * Normally "included" styles are pulled into the element and all urls in styles
+ * are re-written to be relative to the containing script url.
+ * If no includes or relative urls are used in styles, these steps can be
+ * skipped as an optimization.
+ */
+let legacyOptimizations = false;
+
+/**
+ * Setting to perform initial rendering synchronously when running under ShadyDOM.
+ * This matches the behavior of Polymer 1.
+ */
+let syncInitialRender = false;
 
 /**
 @license
@@ -297,6 +319,7 @@ function styleOutsideTemplateCheck(inst) {
  */
 class DomModule extends HTMLElement {
 
+  /** @override */
   static get observedAttributes() { return ['id']; }
 
   /**
@@ -480,7 +503,7 @@ function stylesFromModule(moduleId) {
  * Returns the `<style>` elements within a given template.
  *
  * @param {!HTMLTemplateElement} template Template to gather styles from
- * @param {string} baseURI baseURI for style content
+ * @param {string=} baseURI baseURI for style content
  * @return {!Array<!HTMLStyleElement>} Array of styles
  */
 function stylesFromTemplate(template, baseURI) {
@@ -499,7 +522,8 @@ function stylesFromTemplate(template, baseURI) {
         }));
       }
       if (baseURI) {
-        e.textContent = resolveCss(e.textContent, baseURI);
+        e.textContent =
+            resolveCss(e.textContent, /** @type {string} */ (baseURI));
       }
       styles.push(e);
     }
@@ -543,6 +567,30 @@ function _stylesFromModuleImports(module) {
   }
   return styles;
 }
+
+/**
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+*/
+
+/* eslint-disable valid-jsdoc */
+/**
+ * Node wrapper to ensure ShadowDOM safe operation regardless of polyfill
+ * presence or mode. Note that with the introduction of `ShadyDOM.noPatch`,
+ * a node wrapper must be used to access ShadowDOM API.
+ * This is similar to using `Polymer.dom` but relies exclusively
+ * on the presence of the ShadyDOM polyfill rather than requiring the loading
+ * of legacy (Polymer.dom) API.
+ * @type {function(Node):Node}
+ */
+const wrap = (window['ShadyDOM'] && window['ShadyDOM']['noPatch'] && window['ShadyDOM']['wrap']) ?
+  window['ShadyDOM']['wrap'] :
+  (window['ShadyDOM'] ? (n) => ShadyDOM['patch'](n) : (n) => n);
 
 /**
 @license
@@ -928,6 +976,9 @@ const microtask = microTask;
  * @polymer
  * @summary Element class mixin for reacting to property changes from
  *   generated property accessors.
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const PropertiesChanged = dedupingMixin(
     /**
@@ -950,6 +1001,7 @@ const PropertiesChanged = dedupingMixin(
      * @param {!Object} props Object whose keys are names of accessors.
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createProperties(props) {
       const proto = this.prototype;
@@ -969,6 +1021,7 @@ const PropertiesChanged = dedupingMixin(
      * @return {string} Attribute name corresponding to the given property.
      *
      * @protected
+     * @nocollapse
      */
     static attributeNameForProperty(property) {
       return property.toLowerCase();
@@ -980,6 +1033,7 @@ const PropertiesChanged = dedupingMixin(
      * @param {string} name Name of property
      *
      * @protected
+     * @nocollapse
      */
     static typeForProperty(name) { } //eslint-disable-line no-unused-vars
 
@@ -1002,7 +1056,7 @@ const PropertiesChanged = dedupingMixin(
      */
     _createPropertyAccessor(property, readOnly) {
       this._addPropertyToAttributeMap(property);
-      if (!this.hasOwnProperty('__dataHasAccessor')) {
+      if (!this.hasOwnProperty(JSCompiler_renameProperty('__dataHasAccessor', this))) {
         this.__dataHasAccessor = Object.assign({}, this.__dataHasAccessor);
       }
       if (!this.__dataHasAccessor[property]) {
@@ -1020,7 +1074,7 @@ const PropertiesChanged = dedupingMixin(
      * @override
      */
     _addPropertyToAttributeMap(property) {
-      if (!this.hasOwnProperty('__dataAttributes')) {
+      if (!this.hasOwnProperty(JSCompiler_renameProperty('__dataAttributes', this))) {
         this.__dataAttributes = Object.assign({}, this.__dataAttributes);
       }
       if (!this.__dataAttributes[property]) {
@@ -1053,6 +1107,7 @@ const PropertiesChanged = dedupingMixin(
 
     constructor() {
       super();
+      /** @type {boolean} */
       this.__dataEnabled = false;
       this.__dataReady = false;
       this.__dataInvalid = false;
@@ -1388,6 +1443,9 @@ const PropertiesChanged = dedupingMixin(
      */
     _valueToNodeAttribute(node, value, attribute) {
       const str = this._serializeValue(value);
+      if (attribute === 'class' || attribute === 'name' || attribute === 'slot') {
+        node = /** @type {?Element} */(wrap(node));
+      }
       if (str === undefined) {
         node.removeAttribute(attribute);
       } else {
@@ -1511,16 +1569,18 @@ function saveAccessorValue(model, property) {
  *
  * For basic usage of this mixin:
  *
- * -   Declare attributes to observe via the standard `static get observedAttributes()`. Use
- *     `dash-case` attribute names to represent `camelCase` property names.
+ * -   Declare attributes to observe via the standard `static get
+ *     observedAttributes()`. Use `dash-case` attribute names to represent
+ *     `camelCase` property names.
  * -   Implement the `_propertiesChanged` callback on the class.
- * -   Call `MyClass.createPropertiesForAttributes()` **once** on the class to generate
- *     property accessors for each observed attribute. This must be called before the first
- *     instance is created, for example, by calling it before calling `customElements.define`.
- *     It can also be called lazily from the element's `constructor`, as long as it's guarded so
- *     that the call is only made once, when the first instance is created.
- * -   Call `this._enableProperties()` in the element's `connectedCallback` to enable
- *     the accessors.
+ * -   Call `MyClass.createPropertiesForAttributes()` **once** on the class to
+ *     generate property accessors for each observed attribute. This must be
+ *     called before the first instance is created, for example, by calling it
+ *     before calling `customElements.define`. It can also be called lazily from
+ *     the element's `constructor`, as long as it's guarded so that the call is
+ *     only made once, when the first instance is created.
+ * -   Call `this._enableProperties()` in the element's `connectedCallback` to
+ *     enable the accessors.
  *
  * Any `observedAttributes` will automatically be
  * deserialized via `attributeChangedCallback` and set to the associated
@@ -1531,12 +1591,14 @@ function saveAccessorValue(model, property) {
  * @appliesMixin PropertiesChanged
  * @summary Element class mixin for reacting to property changes from
  *   generated property accessors.
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const PropertyAccessors = dedupingMixin(superClass => {
 
   /**
    * @constructor
-   * @extends {superClass}
    * @implements {Polymer_PropertiesChanged}
    * @unrestricted
    * @private
@@ -1560,9 +1622,10 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * `camelCase` convention
      *
      * @return {void}
+     * @nocollapse
      */
     static createPropertiesForAttributes() {
-      let a$ = this.observedAttributes;
+      let a$ =  /** @type {?} */ (this).observedAttributes;
       for (let i=0; i < a$.length; i++) {
         this.prototype._createPropertyAccessor(dashToCamelCase(a$[i]));
       }
@@ -1575,6 +1638,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * @return {string} Attribute name corresponding to the given property.
      *
      * @protected
+     * @nocollapse
      */
     static attributeNameForProperty(property) {
       return camelToDashCase(property);
@@ -1587,6 +1651,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      *
      * @return {void}
      * @protected
+     * @override
      */
     _initializeProperties() {
       if (this.__dataProto) {
@@ -1608,6 +1673,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      *   when creating property accessors.
      * @return {void}
      * @protected
+     * @override
      */
     _initializeProtoProperties(props) {
       for (let p in props) {
@@ -1619,11 +1685,13 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * Ensures the element has the given attribute. If it does not,
      * assigns the given value to the attribute.
      *
-     * @suppress {invalidCasts} Closure can't figure out `this` is infact an element
+     * @suppress {invalidCasts} Closure can't figure out `this` is infact an
+     *     element
      *
      * @param {string} attribute Name of attribute to ensure is set.
      * @param {string} value of the attribute.
      * @return {void}
+     * @override
      */
     _ensureAttribute(attribute, value) {
       const el = /** @type {!HTMLElement} */(this);
@@ -1636,7 +1704,9 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * Overrides PropertiesChanged implemention to serialize objects as JSON.
      *
      * @param {*} value Property value to serialize.
-     * @return {string | undefined} String serialized from the provided property value.
+     * @return {string | undefined} String serialized from the provided property
+     *     value.
+     * @override
      */
     _serializeValue(value) {
       /* eslint-disable no-fallthrough */
@@ -1671,6 +1741,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * @param {?string} value Attribute value to deserialize.
      * @param {*=} type Type to deserialize the string to.
      * @return {*} Typed value deserialized from the provided string.
+     * @override
      */
     _deserializeValue(value, type) {
       /**
@@ -1720,6 +1791,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * for the values to take effect.
      * @protected
      * @return {void}
+     * @override
      */
     _definePropertyAccessor(property, readOnly) {
       saveAccessorValue(this, property);
@@ -1731,6 +1803,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      *
      * @param {string} property Property name
      * @return {boolean} True if an accessor was created
+     * @override
      */
     _hasAccessor(property) {
       return this.__dataHasAccessor && this.__dataHasAccessor[property];
@@ -1742,6 +1815,7 @@ const PropertyAccessors = dedupingMixin(superClass => {
      * @param {string} prop Property name
      * @return {boolean} True if property has a pending change
      * @protected
+     * @override
      */
     _isPropertyPending(prop) {
       return Boolean(this.__dataPending && (prop in this.__dataPending));
@@ -1774,6 +1848,53 @@ const templateExtensions = {
   'dom-if': true,
   'dom-repeat': true
 };
+
+let placeholderBugDetect = false;
+let placeholderBug = false;
+
+function hasPlaceholderBug() {
+  if (!placeholderBugDetect) {
+    placeholderBugDetect = true;
+    const t = document.createElement('textarea');
+    t.placeholder = 'a';
+    placeholderBug = t.placeholder === t.textContent;
+  }
+  return placeholderBug;
+}
+
+/**
+ * Some browsers have a bug with textarea, where placeholder text is copied as
+ * a textnode child of the textarea.
+ *
+ * If the placeholder is a binding, this can break template stamping in two
+ * ways.
+ *
+ * One issue is that when the `placeholder` attribute is removed when the
+ * binding is processed, the textnode child of the textarea is deleted, and the
+ * template info tries to bind into that node.
+ *
+ * With `legacyOptimizations` in use, when the template is stamped and the
+ * `textarea.textContent` binding is processed, no corresponding node is found
+ * because it was removed during parsing. An exception is generated when this
+ * binding is updated.
+ *
+ * With `legacyOptimizations` not in use, the template is cloned before
+ * processing and this changes the above behavior. The cloned template also has
+ * a value property set to the placeholder and textContent. This prevents the
+ * removal of the textContent when the placeholder attribute is removed.
+ * Therefore the exception does not occur. However, there is an extra
+ * unnecessary binding.
+ *
+ * @param {!Node} node Check node for placeholder bug
+ * @return {void}
+ */
+function fixPlaceholder(node) {
+  if (hasPlaceholderBug() && node.localName === 'textarea' && node.placeholder
+        && node.placeholder === node.textContent) {
+    node.textContent = null;
+  }
+}
+
 function wrapTemplateExtension(node) {
   let is = node.getAttribute('is');
   if (is && templateExtensions[is]) {
@@ -1856,6 +1977,9 @@ function createNodeEventHandler(context, eventName, methodName) {
  * @mixinFunction
  * @polymer
  * @summary Element class mixin that provides basic template parsing and stamping
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const TemplateStamp = dedupingMixin(
     /**
@@ -1946,20 +2070,33 @@ const TemplateStamp = dedupingMixin(
      * @param {TemplateInfo=} outerTemplateInfo Template metadata from the outer
      *   template, for parsing nested templates
      * @return {!TemplateInfo} Parsed template metadata
+     * @nocollapse
      */
     static _parseTemplate(template, outerTemplateInfo) {
       // since a template may be re-used, memo-ize metadata
       if (!template._templateInfo) {
-        let templateInfo = template._templateInfo = {};
+        // TODO(rictic): fix typing
+        let /** ? */ templateInfo = template._templateInfo = {};
         templateInfo.nodeInfoList = [];
         templateInfo.stripWhiteSpace =
           (outerTemplateInfo && outerTemplateInfo.stripWhiteSpace) ||
           template.hasAttribute('strip-whitespace');
-        this._parseTemplateContent(template, templateInfo, {parent: null});
+         // TODO(rictic): fix typing
+         this._parseTemplateContent(
+             template, templateInfo, /** @type {?} */ ({parent: null}));
       }
       return template._templateInfo;
     }
 
+    /**
+     * See docs for _parseTemplateNode.
+     *
+     * @param {!HTMLTemplateElement} template .
+     * @param {!TemplateInfo} templateInfo .
+     * @param {!NodeInfo} nodeInfo .
+     * @return {boolean} .
+     * @nocollapse
+     */
     static _parseTemplateContent(template, templateInfo, nodeInfo) {
       return this._parseTemplateNode(template.content, templateInfo, nodeInfo);
     }
@@ -1976,18 +2113,20 @@ const TemplateStamp = dedupingMixin(
      * @param {!NodeInfo} nodeInfo Node metadata for current template.
      * @return {boolean} `true` if the visited node added node-specific
      *   metadata to `nodeInfo`
+     * @nocollapse
      */
     static _parseTemplateNode(node, templateInfo, nodeInfo) {
-      let noted;
-      let element = /** @type {Element} */(node);
+      let noted = false;
+      let element = /** @type {!HTMLTemplateElement} */ (node);
       if (element.localName == 'template' && !element.hasAttribute('preserve-content')) {
         noted = this._parseTemplateNestedTemplate(element, templateInfo, nodeInfo) || noted;
       } else if (element.localName === 'slot') {
         // For ShadyDom optimization, indicating there is an insertion point
         templateInfo.hasInsertionPoint = true;
       }
+      fixPlaceholder(element);
       if (element.firstChild) {
-        noted = this._parseTemplateChildNodes(element, templateInfo, nodeInfo) || noted;
+        this._parseTemplateChildNodes(element, templateInfo, nodeInfo);
       }
       if (element.hasAttributes && element.hasAttributes()) {
         noted = this._parseTemplateNodeAttributes(element, templateInfo, nodeInfo) || noted;
@@ -2036,9 +2175,10 @@ const TemplateStamp = dedupingMixin(
             continue;
           }
         }
-        let childInfo = { parentIndex, parentInfo: nodeInfo };
+        let childInfo =
+            /** @type {!NodeInfo} */ ({parentIndex, parentInfo: nodeInfo});
         if (this._parseTemplateNode(node, templateInfo, childInfo)) {
-          childInfo.infoIndex = templateInfo.nodeInfoList.push(/** @type {!NodeInfo} */(childInfo)) - 1;
+          childInfo.infoIndex = templateInfo.nodeInfoList.push(childInfo) - 1;
         }
         // Increment if not removed
         if (node.parentNode) {
@@ -2063,12 +2203,15 @@ const TemplateStamp = dedupingMixin(
      * @param {!NodeInfo} nodeInfo Node metadata for current template.
      * @return {boolean} `true` if the visited node added node-specific
      *   metadata to `nodeInfo`
+     * @nocollapse
      */
     static _parseTemplateNestedTemplate(node, outerTemplateInfo, nodeInfo) {
-      let templateInfo = this._parseTemplate(node, outerTemplateInfo);
+      // TODO(rictic): the type of node should be non-null
+      let element = /** @type {!HTMLTemplateElement} */ (node);
+      let templateInfo = this._parseTemplate(element, outerTemplateInfo);
       let content = templateInfo.content =
-        node.content.ownerDocument.createDocumentFragment();
-      content.appendChild(node.content);
+          element.content.ownerDocument.createDocumentFragment();
+      content.appendChild(element.content);
       nodeInfo.templateInfo = templateInfo;
       return true;
     }
@@ -2078,10 +2221,12 @@ const TemplateStamp = dedupingMixin(
      * for nodes of interest.
      *
      * @param {Element} node Node to parse
-     * @param {TemplateInfo} templateInfo Template metadata for current template
-     * @param {NodeInfo} nodeInfo Node metadata for current template.
+     * @param {!TemplateInfo} templateInfo Template metadata for current
+     *     template
+     * @param {!NodeInfo} nodeInfo Node metadata for current template.
      * @return {boolean} `true` if the visited node added node-specific
      *   metadata to `nodeInfo`
+     * @nocollapse
      */
     static _parseTemplateNodeAttributes(node, templateInfo, nodeInfo) {
       // Make copy of original attribute list, since the order may change
@@ -2108,6 +2253,7 @@ const TemplateStamp = dedupingMixin(
      * @param {string} value Attribute value
      * @return {boolean} `true` if the visited node added node-specific
      *   metadata to `nodeInfo`
+     * @nocollapse
      */
     static _parseTemplateNodeAttribute(node, templateInfo, nodeInfo, name, value) {
       // events (on-*)
@@ -2137,6 +2283,7 @@ const TemplateStamp = dedupingMixin(
      *
      * @param {HTMLTemplateElement} template Template to retrieve `content` for
      * @return {DocumentFragment} Content fragment
+     * @nocollapse
      */
     static _contentForTemplate(template) {
       let templateInfo = /** @type {HTMLTemplateElementWithInfo} */ (template)._templateInfo;
@@ -2244,14 +2391,16 @@ const TemplateStamp = dedupingMixin(
 });
 
 /**
-@license
-Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
-*/
+ * @fileoverview
+ * @suppress {checkPrototypalTypes}
+ * @license Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+ * This code may only be used under the BSD style license found at
+ * http://polymer.github.io/LICENSE.txt The complete set of authors may be found
+ * at http://polymer.github.io/AUTHORS.txt The complete set of contributors may
+ * be found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by
+ * Google as part of the polymer project is also subject to an additional IP
+ * rights grant found at http://polymer.github.io/PATENTS.txt
+ */
 
 // Monotonically increasing unique ID used for de-duping effects triggered
 // from multiple properties in the same turn
@@ -2270,7 +2419,7 @@ const TYPES = {
   READ_ONLY: '__readOnly'
 };
 
-/** @const {RegExp} */
+/** @const {!RegExp} */
 const capitalAttributeRegex = /[A-Z]/;
 
 /**
@@ -2318,10 +2467,10 @@ function ensureOwnEffectMap(model, type) {
  * Runs all effects of a given type for the given set of property changes
  * on an instance.
  *
- * @param {!PropertyEffectsType} inst The instance with effects to run
- * @param {Object} effects Object map of property-to-Array of effects
- * @param {Object} props Bag of current property changes
- * @param {Object=} oldProps Bag of previous values for changed properties
+ * @param {!Polymer_PropertyEffects} inst The instance with effects to run
+ * @param {?Object} effects Object map of property-to-Array of effects
+ * @param {?Object} props Bag of current property changes
+ * @param {?Object=} oldProps Bag of previous values for changed properties
  * @param {boolean=} hasPaths True with `props` contains one or more paths
  * @param {*=} extraArgs Additional metadata to pass to effect function
  * @return {boolean} True if an effect ran for this property
@@ -2332,7 +2481,9 @@ function runEffects(inst, effects, props, oldProps, hasPaths, extraArgs) {
     let ran = false;
     let id = dedupeId$1++;
     for (let prop in props) {
-      if (runEffectsForProperty(inst, effects, id, prop, props, oldProps, hasPaths, extraArgs)) {
+      if (runEffectsForProperty(
+              inst, /** @type {!Object} */ (effects), id, prop, props, oldProps,
+              hasPaths, extraArgs)) {
         ran = true;
       }
     }
@@ -2344,8 +2495,8 @@ function runEffects(inst, effects, props, oldProps, hasPaths, extraArgs) {
 /**
  * Runs a list of effects for a given property.
  *
- * @param {!PropertyEffectsType} inst The instance with effects to run
- * @param {Object} effects Object map of property-to-Array of effects
+ * @param {!Polymer_PropertyEffects} inst The instance with effects to run
+ * @param {!Object} effects Object map of property-to-Array of effects
  * @param {number} dedupeId Counter used for de-duping effects
  * @param {string} prop Name of changed property
  * @param {*} props Changed properties
@@ -2389,15 +2540,15 @@ function runEffectsForProperty(inst, effects, dedupeId, prop, props, oldProps, h
  * If no trigger is given, the path is deemed to match.
  *
  * @param {string} path Path or property that changed
- * @param {DataTrigger} trigger Descriptor
+ * @param {?DataTrigger} trigger Descriptor
  * @return {boolean} Whether the path matched the trigger
  */
 function pathMatchesTrigger(path, trigger) {
   if (trigger) {
-    let triggerPath = trigger.name;
+    let triggerPath = /** @type {string} */ (trigger.name);
     return (triggerPath == path) ||
-      (trigger.structured && isAncestor(triggerPath, path)) ||
-      (trigger.wildcard && isDescendant(triggerPath, path));
+        !!(trigger.structured && isAncestor(triggerPath, path)) ||
+        !!(trigger.wildcard && isDescendant(triggerPath, path));
   } else {
     return true;
   }
@@ -2409,7 +2560,7 @@ function pathMatchesTrigger(path, trigger) {
  * Calls the method with `info.methodName` on the instance, passing the
  * new and old values.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} property Name of property
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -2437,7 +2588,7 @@ function runObserverEffect(inst, property, props, oldProps, info) {
  * `notify: true` to ensure object sub-property notifications were
  * sent.
  *
- * @param {!PropertyEffectsType} inst The instance with effects to run
+ * @param {!Polymer_PropertyEffects} inst The instance with effects to run
  * @param {Object} notifyProps Bag of properties to notify
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -2473,7 +2624,8 @@ function runNotifyEffects(inst, notifyProps, props, oldProps, hasPaths) {
  * Dispatches {property}-changed events with path information in the detail
  * object to indicate a sub-path of the property was changed.
  *
- * @param {!PropertyEffectsType} inst The element from which to fire the event
+ * @param {!Polymer_PropertyEffects} inst The element from which to fire the
+ *     event
  * @param {string} path The path that was changed
  * @param {Object} props Bag of current property changes
  * @return {boolean} Returns true if the path was notified
@@ -2493,11 +2645,13 @@ function notifyPath(inst, path, props) {
  * Dispatches {property}-changed events to indicate a property (or path)
  * changed.
  *
- * @param {!PropertyEffectsType} inst The element from which to fire the event
- * @param {string} eventName The name of the event to send ('{property}-changed')
+ * @param {!Polymer_PropertyEffects} inst The element from which to fire the
+ *     event
+ * @param {string} eventName The name of the event to send
+ *     ('{property}-changed')
  * @param {*} value The value of the changed property
- * @param {string | null | undefined} path If a sub-path of this property changed, the path
- *   that changed (optional).
+ * @param {string | null | undefined} path If a sub-path of this property
+ *     changed, the path that changed (optional).
  * @return {void}
  * @private
  * @suppress {invalidCasts}
@@ -2510,7 +2664,7 @@ function dispatchNotifyEvent(inst, eventName, value, path) {
   if (path) {
     detail.path = path;
   }
-  /** @type {!HTMLElement} */(inst).dispatchEvent(new CustomEvent(eventName, { detail }));
+  wrap(/** @type {!HTMLElement} */(inst)).dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
 /**
@@ -2519,7 +2673,7 @@ function dispatchNotifyEvent(inst, eventName, value, path) {
  * Dispatches a non-bubbling event named `info.eventName` on the instance
  * with a detail object containing the new `value`.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} property Name of property
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -2548,7 +2702,8 @@ function runNotifyEffect(inst, property, props, oldProps, info, hasPaths) {
  * scope's name for that path first.
  *
  * @param {CustomEvent} event Notification event (e.g. '<property>-changed')
- * @param {!PropertyEffectsType} inst Host element instance handling the notification event
+ * @param {!Polymer_PropertyEffects} inst Host element instance handling the
+ *     notification event
  * @param {string} fromProp Child element property that was bound
  * @param {string} toPath Host property/path that was bound
  * @param {boolean} negate Whether the binding was negated
@@ -2579,7 +2734,7 @@ function handleNotification(event, inst, fromProp, toPath, negate) {
  *
  * Sets the attribute named `info.attrName` to the given property value.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} property Name of property
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -2605,9 +2760,9 @@ function runReflectEffect(inst, property, props, oldProps, info) {
  * computed before other effects (binding propagation, observers, and notify)
  * run.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
- * @param {!Object} changedProps Bag of changed properties
- * @param {!Object} oldProps Bag of previous values for changed properties
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
+ * @param {?Object} changedProps Bag of changed properties
+ * @param {?Object} oldProps Bag of previous values for changed properties
  * @param {boolean} hasPaths True with `props` contains one or more paths
  * @return {void}
  * @private
@@ -2617,8 +2772,8 @@ function runComputedEffects(inst, changedProps, oldProps, hasPaths) {
   if (computeEffects) {
     let inputProps = changedProps;
     while (runEffects(inst, computeEffects, inputProps, oldProps, hasPaths)) {
-      Object.assign(oldProps, inst.__dataOld);
-      Object.assign(changedProps, inst.__dataPending);
+      Object.assign(/** @type {!Object} */ (oldProps), inst.__dataOld);
+      Object.assign(/** @type {!Object} */ (changedProps), inst.__dataPending);
       inputProps = inst.__dataPending;
       inst.__dataPending = null;
     }
@@ -2630,10 +2785,10 @@ function runComputedEffects(inst, changedProps, oldProps, hasPaths) {
  * values of the arguments specified in the `info` object and setting the
  * return value to the computed property specified.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} property Name of property
- * @param {Object} props Bag of current property changes
- * @param {Object} oldProps Bag of previous values for changed properties
+ * @param {?Object} props Bag of current property changes
+ * @param {?Object} oldProps Bag of previous values for changed properties
  * @param {?} info Effect metadata
  * @return {void}
  * @private
@@ -2652,8 +2807,8 @@ function runComputedEffect(inst, property, props, oldProps, info) {
  * Computes path changes based on path links set up using the `linkPaths`
  * API.
  *
- * @param {!PropertyEffectsType} inst The instance whose props are changing
- * @param {string | !Array<(string|number)>} path Path that has changed
+ * @param {!Polymer_PropertyEffects} inst The instance whose props are changing
+ * @param {string} path Path that has changed
  * @param {*} value Value of changed path
  * @return {void}
  * @private
@@ -2758,7 +2913,7 @@ function addEffectForBindingPart(constructor, templateInfo, binding, part, index
  * there is no support for _path_ bindings via custom binding parts,
  * as this is specific to Polymer's path binding syntax.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} path Name of property
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -2795,7 +2950,7 @@ function runBindingEffect(inst, path, props, oldProps, info, hasPaths, nodeList)
  * Sets the value for an "binding" (binding) effect to a node,
  * either as a property or attribute.
  *
- * @param {!PropertyEffectsType} inst The instance owning the binding effect
+ * @param {!Polymer_PropertyEffects} inst The instance owning the binding effect
  * @param {Node} node Target node for binding
  * @param {!Binding} binding Binding metadata
  * @param {!BindingPart} part Binding part metadata
@@ -2880,7 +3035,8 @@ function shouldAddListener(binding) {
  * Setup compound binding storage structures, notify listeners, and dataHost
  * references onto the bound nodeList.
  *
- * @param {!PropertyEffectsType} inst Instance that bas been previously bound
+ * @param {!Polymer_PropertyEffects} inst Instance that bas been previously
+ *     bound
  * @param {TemplateInfo} templateInfo Template metadata
  * @return {void}
  * @private
@@ -2934,6 +3090,12 @@ function setupCompoundStorage(node, binding) {
     storage[target] = literals;
     // Configure properties with their literal parts
     if (binding.literal && binding.kind == 'property') {
+      // Note, className needs style scoping so this needs wrapping.
+      // We may also want to consider doing this for `textContent` and
+      // `innerHTML`.
+      if (target === 'className') {
+        node = wrap(node);
+      }
       node[target] = binding.literal;
     }
   }
@@ -2943,7 +3105,8 @@ function setupCompoundStorage(node, binding) {
  * Adds a 2-way binding notification event listener to the node specified
  *
  * @param {Object} node Child element to add listener to
- * @param {!PropertyEffectsType} inst Host element instance to handle notification event
+ * @param {!Polymer_PropertyEffects} inst Host element instance to handle
+ *     notification event
  * @param {Binding} binding Binding metadata
  * @return {void}
  * @private
@@ -3007,7 +3170,7 @@ function createMethodEffect(model, sig, type, effectFn, methodInfo, dynamicFn) {
  * functions call this function to invoke the method, then use the return
  * value accordingly.
  *
- * @param {!PropertyEffectsType} inst The instance the effect will be run on
+ * @param {!Polymer_PropertyEffects} inst The instance the effect will be run on
  * @param {string} property Name of property
  * @param {Object} props Bag of current property changes
  * @param {Object} oldProps Bag of previous values for changed properties
@@ -3177,6 +3340,19 @@ function parseArg(rawArg) {
   return a;
 }
 
+function getArgValue(data, props, path) {
+  let value = get(data, path);
+  // when data is not stored e.g. `splices`, get the value from changedProps
+  // TODO(kschaaf): Note, this can cause a rare issue where the wildcard
+  // info.value could pull a stale value out of changedProps during a reentrant
+  // change that sets the value back to undefined.
+  // https://github.com/Polymer/polymer/issues/5479
+  if (value === undefined) {
+    value = props[path];
+  }
+  return value;
+}
+
 // data api
 
 /**
@@ -3184,7 +3360,7 @@ function parseArg(rawArg) {
  *
  * Note: this implementation only accepts normalized paths
  *
- * @param {!PropertyEffectsType} inst Instance to send notifications to
+ * @param {!Polymer_PropertyEffects} inst Instance to send notifications to
  * @param {Array} array The array the mutations occurred on
  * @param {string} path The path to the array that was mutated
  * @param {Array} splices Array of splice records
@@ -3192,11 +3368,8 @@ function parseArg(rawArg) {
  * @private
  */
 function notifySplices(inst, array, path, splices) {
-  let splicesPath = path + '.splices';
-  inst.notifyPath(splicesPath, { indexSplices: splices });
+  inst.notifyPath(path + '.splices', { indexSplices: splices });
   inst.notifyPath(path + '.length', array.length);
-  // Null here to allow potentially large splice records to be GC'ed.
-  inst.__data[splicesPath] = {indexSplices: null};
 }
 
 /**
@@ -3205,7 +3378,7 @@ function notifySplices(inst, array, path, splices) {
  *
  * Note: this implementation only accepts normalized paths
  *
- * @param {!PropertyEffectsType} inst Instance to send notifications to
+ * @param {!Polymer_PropertyEffects} inst Instance to send notifications to
  * @param {Array} array The array the mutations occurred on
  * @param {string} path The path to the array that was mutated
  * @param {number} index Index at which the array mutation occurred
@@ -3269,12 +3442,14 @@ function upper(name) {
  * @appliesMixin PropertyAccessors
  * @summary Element class mixin that provides meta-programming for Polymer's
  * template binding and data observation system.
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const PropertyEffects = dedupingMixin(superClass => {
 
   /**
    * @constructor
-   * @extends {superClass}
    * @implements {Polymer_PropertyAccessors}
    * @implements {Polymer_TemplateStamp}
    * @unrestricted
@@ -3321,7 +3496,7 @@ const PropertyEffects = dedupingMixin(superClass => {
       this.__dataClientsInitialized;
       /** @type {!Object} */
       this.__data;
-      /** @type {!Object} */
+      /** @type {!Object|null} */
       this.__dataPending;
       /** @type {!Object} */
       this.__dataOld;
@@ -3341,11 +3516,15 @@ const PropertyEffects = dedupingMixin(superClass => {
       this.__templateInfo;
     }
 
+    /**
+     * @return {!Object<string, string>} Effect prototype property name map.
+     */
     get PROPERTY_EFFECT_TYPES() {
       return TYPES;
     }
 
     /**
+     * @override
      * @return {void}
      */
     _initializeProperties() {
@@ -3404,6 +3583,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Property that should trigger the effect
      * @param {string} type Effect type, from this.PROPERTY_EFFECT_TYPES
      * @param {Object=} effect Effect metadata object
@@ -3423,6 +3603,7 @@ const PropertyEffects = dedupingMixin(superClass => {
     /**
      * Removes the given property effect.
      *
+     * @override
      * @param {string} property Property the effect was associated with
      * @param {string} type Effect type, from this.PROPERTY_EFFECT_TYPES
      * @param {Object=} effect Effect metadata object to remove
@@ -3440,9 +3621,11 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Returns whether the current prototype/instance has a property effect
      * of a certain type.
      *
+     * @override
      * @param {string} property Property name
      * @param {string=} type Effect type, from this.PROPERTY_EFFECT_TYPES
-     * @return {boolean} True if the prototype/instance has an effect of this type
+     * @return {boolean} True if the prototype/instance has an effect of this
+     *     type
      * @protected
      */
     _hasPropertyEffect(property, type) {
@@ -3454,8 +3637,10 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Returns whether the current prototype/instance has a "read only"
      * accessor for the given property.
      *
+     * @override
      * @param {string} property Property name
-     * @return {boolean} True if the prototype/instance has an effect of this type
+     * @return {boolean} True if the prototype/instance has an effect of this
+     *     type
      * @protected
      */
     _hasReadOnlyEffect(property) {
@@ -3466,8 +3651,10 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Returns whether the current prototype/instance has a "notify"
      * property effect for the given property.
      *
+     * @override
      * @param {string} property Property name
-     * @return {boolean} True if the prototype/instance has an effect of this type
+     * @return {boolean} True if the prototype/instance has an effect of this
+     *     type
      * @protected
      */
     _hasNotifyEffect(property) {
@@ -3475,11 +3662,13 @@ const PropertyEffects = dedupingMixin(superClass => {
     }
 
     /**
-     * Returns whether the current prototype/instance has a "reflect to attribute"
-     * property effect for the given property.
+     * Returns whether the current prototype/instance has a "reflect to
+     * attribute" property effect for the given property.
      *
+     * @override
      * @param {string} property Property name
-     * @return {boolean} True if the prototype/instance has an effect of this type
+     * @return {boolean} True if the prototype/instance has an effect of this
+     *     type
      * @protected
      */
     _hasReflectEffect(property) {
@@ -3490,8 +3679,10 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Returns whether the current prototype/instance has a "computed"
      * property effect for the given property.
      *
+     * @override
      * @param {string} property Property name
-     * @return {boolean} True if the prototype/instance has an effect of this type
+     * @return {boolean} True if the prototype/instance has an effect of this
+     *     type
      * @protected
      */
     _hasComputedEffect(property) {
@@ -3515,6 +3706,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * `path` can be a path string or array of path parts as accepted by the
      * public API.
      *
+     * @override
      * @param {string | !Array<number|string>} path Path to set
      * @param {*} value Value to set
      * @param {boolean=} shouldNotify Set to true if this change should
@@ -3549,7 +3741,7 @@ const PropertyEffects = dedupingMixin(superClass => {
         }
         this.__dataHasPaths = true;
         if (this._setPendingProperty(/**@type{string}*/(path), value, shouldNotify)) {
-          computeLinkedPaths(this, path, value);
+          computeLinkedPaths(this, /**@type{string}*/ (path), value);
           return true;
         }
       } else {
@@ -3577,6 +3769,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *
      * Users may override this method to provide alternate approaches.
      *
+     * @override
      * @param {!Node} node The node to set a property on
      * @param {string} prop The property to set
      * @param {*} value The value to set
@@ -3589,6 +3782,10 @@ const PropertyEffects = dedupingMixin(superClass => {
       // implement a whitelist of tag & property values that should never
       // be reset (e.g. <input>.value && <select>.value)
       if (value !== node[prop] || typeof value == 'object') {
+        // Note, className needs style scoping so this needs wrapping.
+        if (prop === 'className') {
+          node = /** @type {!Node} */(wrap(node));
+        }
         node[prop] = value;
       }
     }
@@ -3694,6 +3891,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * pending property changes can later be flushed via a call to
      * `_flushClients`.
      *
+     * @override
      * @param {Object} client PropertyEffects client to enqueue
      * @return {void}
      * @protected
@@ -3708,6 +3906,7 @@ const PropertyEffects = dedupingMixin(superClass => {
     /**
      * Overrides superclass implementation.
      *
+     * @override
      * @return {void}
      * @protected
      */
@@ -3721,6 +3920,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Flushes any clients previously enqueued via `_enqueueClient`, causing
      * their `_flushProperties` method to run.
      *
+     * @override
      * @return {void}
      * @protected
      */
@@ -3769,6 +3969,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * `_flushProperties` call on client dom and before any element
      * observers are called.
      *
+     * @override
      * @return {void}
      * @protected
      */
@@ -3783,6 +3984,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Property names must be simple properties, not paths.  Batched
      * path propagation is not supported.
      *
+     * @override
      * @param {Object} props Bag of one or more key-value pairs whose key is
      *   a property and value is the new value to set for that property.
      * @param {boolean=} setReadOnly When true, any private values set in
@@ -3837,6 +4039,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Runs each class of effects for the batch of changed properties in
      * a specific order (compute, propagate, reflect, observe, notify).
      *
+     * @override
      * @param {!Object} currentProps Bag of all current accessor values
      * @param {?Object} changedProps Bag of properties changed since the last
      *   call to `_propertiesChanged`
@@ -3883,6 +4086,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Called to propagate any property changes to stamped template nodes
      * managed by this element.
      *
+     * @override
      * @param {Object} changedProps Bag of changed properties
      * @param {Object} oldProps Bag of previous values for changed properties
      * @param {boolean} hasPaths True with `props` contains one or more paths
@@ -3905,6 +4109,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Aliases one data path as another, such that path notifications from one
      * are routed to the other.
      *
+     * @override
      * @param {string | !Array<string|number>} to Target path to link.
      * @param {string | !Array<string|number>} from Source path to link.
      * @return {void}
@@ -3923,6 +4128,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Note, the path to unlink should be the target (`to`) used when
      * linking the paths.
      *
+     * @override
      * @param {string | !Array<string|number>} path Target path to unlink.
      * @return {void}
      * @public
@@ -3944,8 +4150,10 @@ const PropertyEffects = dedupingMixin(superClass => {
      *     this.items.splice(1, 1, {name: 'Sam'});
      *     this.items.push({name: 'Bob'});
      *     this.notifySplices('items', [
-     *       { index: 1, removed: [{name: 'Todd'}], addedCount: 1, object: this.items, type: 'splice' },
-     *       { index: 3, removed: [], addedCount: 1, object: this.items, type: 'splice'}
+     *       { index: 1, removed: [{name: 'Todd'}], addedCount: 1,
+     *         object: this.items, type: 'splice' },
+     *       { index: 3, removed: [], addedCount: 1,
+     *         object: this.items, type: 'splice'}
      *     ]);
      *
      * @param {string} path Path that should be notified.
@@ -3961,9 +4169,11 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   Note that splice records _must_ be normalized such that they are
      *   reported in index order (raw results from `Object.observe` are not
      *   ordered and must be normalized/merged before notifying).
+     *
+     * @override
      * @return {void}
      * @public
-    */
+     */
     notifySplices(path, splices) {
       let info = {path: ''};
       let array = /** @type {Array} */(get(this, path, info));
@@ -3977,6 +4187,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * `undefined` (this method does not throw when dereferencing undefined
      * paths).
      *
+     * @override
      * @param {(string|!Array<(string|number)>)} path Path to the value
      *   to read.  The path may be specified as a string (e.g. `foo.bar.baz`)
      *   or an array of path parts (e.g. `['foo.bar', 'baz']`).  Note that
@@ -4001,6 +4212,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * this method does nothing (this method does not throw when
      * dereferencing undefined paths).
      *
+     * @override
      * @param {(string|!Array<(string|number)>)} path Path to the value
      *   to write.  The path may be specified as a string (e.g. `'foo.bar.baz'`)
      *   or an array of path parts (e.g. `['foo.bar', 'baz']`).  Note that
@@ -4013,7 +4225,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   When specified, no notification will occur.
      * @return {void}
      * @public
-    */
+     */
     set(path, value, root$$1) {
       if (root$$1) {
         set(root$$1, path, value);
@@ -4035,6 +4247,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * This method notifies other paths to the same array that a
      * splice occurred to the array.
      *
+     * @override
      * @param {string | !Array<string|number>} path Path to array.
      * @param {...*} items Items to push onto array
      * @return {number} New length of the array.
@@ -4060,6 +4273,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * This method notifies other paths to the same array that a
      * splice occurred to the array.
      *
+     * @override
      * @param {string | !Array<string|number>} path Path to array.
      * @return {*} Item that was removed.
      * @public
@@ -4085,6 +4299,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * This method notifies other paths to the same array that a
      * splice occurred to the array.
      *
+     * @override
      * @param {string | !Array<string|number>} path Path to array.
      * @param {number} start Index from which to start removing/inserting.
      * @param {number=} deleteCount Number of items to remove.
@@ -4140,6 +4355,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * This method notifies other paths to the same array that a
      * splice occurred to the array.
      *
+     * @override
      * @param {string | !Array<string|number>} path Path to array.
      * @return {*} Item that was removed.
      * @public
@@ -4164,6 +4380,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * This method notifies other paths to the same array that a
      * splice occurred to the array.
      *
+     * @override
      * @param {string | !Array<string|number>} path Path to array.
      * @param {...*} items Items to insert info array
      * @return {number} New length of the array.
@@ -4187,11 +4404,12 @@ const PropertyEffects = dedupingMixin(superClass => {
      *     this.item.user.name = 'Bob';
      *     this.notifyPath('item.user.name');
      *
+     * @override
      * @param {string} path Path that should be notified.
      * @param {*=} value Value at the path (optional).
      * @return {void}
      * @public
-    */
+     */
     notifyPath(path, value) {
       /** @type {string} */
       let propPath;
@@ -4216,6 +4434,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Property name
      * @param {boolean=} protectedSetter Creates a custom protected setter
      *   when `true`.
@@ -4236,8 +4455,10 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Property name
-     * @param {string|function(*,*)} method Function or name of observer method to call
+     * @param {string|function(*,*)} method Function or name of observer method
+     *     to call
      * @param {boolean=} dynamicFn Whether the method name should be included as
      *   a dependency to the effect.
      * @return {void}
@@ -4260,6 +4481,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} expression Method expression
      * @param {boolean|Object=} dynamicFn Boolean or object map indicating
      *   whether method names should be included as a dependency to the effect.
@@ -4279,6 +4501,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Property name
      * @return {void}
      * @protected
@@ -4298,9 +4521,11 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Property name
      * @return {void}
      * @protected
+     * @suppress {missingProperties} go/missingfnprops
      */
     _createReflectedProperty(property) {
       let attr = this.constructor.attributeNameForProperty(property);
@@ -4322,6 +4547,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * an instance to add effects at runtime.  See that method for
      * full API docs.
      *
+     * @override
      * @param {string} property Name of computed property to set
      * @param {string} expression Method expression
      * @param {boolean|Object=} dynamicFn Boolean or object map indicating
@@ -4352,37 +4578,23 @@ const PropertyEffects = dedupingMixin(superClass => {
      */
     _marshalArgs(args, path, props) {
       const data = this.__data;
-      let values = [];
+      const values = [];
       for (let i=0, l=args.length; i<l; i++) {
-        let arg = args[i];
-        let name = arg.name;
-        let v;
-        if (arg.literal) {
-          v = arg.value;
-        } else {
-          if (arg.structured) {
-            v = get(data, name);
-            // when data is not stored e.g. `splices`
-            if (v === undefined) {
-              v = props[name];
-            }
+        let {name, structured, wildcard, value, literal} = args[i];
+        if (!literal) {
+          if (wildcard) {
+            const matches$$1 = isDescendant(name, path);
+            const pathValue = getArgValue(data, props, matches$$1 ? path : name);
+            value = {
+              path: matches$$1 ? path : name,
+              value: pathValue,
+              base: matches$$1 ? get(data, name) : pathValue
+            };
           } else {
-            v = data[name];
+            value = structured ? getArgValue(data, props, name) : data[name];
           }
         }
-        if (arg.wildcard) {
-          // Only send the actual path changed info if the change that
-          // caused the observer to run matched the wildcard
-          let baseChanged = (name.indexOf(path + '.') === 0);
-          let matches$$1 = (path.indexOf(name) === 0 && !baseChanged);
-          values[i] = {
-            path: matches$$1 ? path : name,
-            value: matches$$1 ? props[path] : v,
-            base: v
-          };
-        } else {
-          values[i] = v;
-        }
+        values[i] = value;
       }
       return values;
     }
@@ -4424,6 +4636,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {Object=} effect Effect metadata object
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static addPropertyEffect(property, type, effect) {
       this.prototype._addPropertyEffect(property, type, effect);
@@ -4438,6 +4651,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   a dependency to the effect.
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createPropertyObserver(property, method, dynamicFn) {
       this.prototype._createPropertyObserver(property, method, dynamicFn);
@@ -4455,6 +4669,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @return {void}
      *   whether method names should be included as a dependency to the effect.
      * @protected
+     * @nocollapse
      */
     static createMethodObserver(expression, dynamicFn) {
       this.prototype._createMethodObserver(expression, dynamicFn);
@@ -4467,6 +4682,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {string} property Property name
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createNotifyingProperty(property) {
       this.prototype._createNotifyingProperty(property);
@@ -4487,6 +4703,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   when `true`.
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createReadOnlyProperty(property, protectedSetter) {
       this.prototype._createReadOnlyProperty(property, protectedSetter);
@@ -4499,6 +4716,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {string} property Property name
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createReflectedProperty(property) {
       this.prototype._createReflectedProperty(property);
@@ -4517,6 +4735,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   method names should be included as a dependency to the effect.
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createComputedProperty(property, expression, dynamicFn) {
       this.prototype._createComputedProperty(property, expression, dynamicFn);
@@ -4533,6 +4752,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   bindings
      * @return {!TemplateInfo} Template metadata object
      * @protected
+     * @nocollapse
      */
     static bindTemplate(template) {
       return this.prototype._bindTemplate(template);
@@ -4551,6 +4771,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * create and link an instance of the template metadata associated with a
      * particular stamping.
      *
+     * @override
      * @param {!HTMLTemplateElement} template Template containing binding
      *   bindings
      * @param {boolean=} instanceBinding When false (default), performs
@@ -4561,6 +4782,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @return {!TemplateInfo} Template metadata object; for `runtimeBinding`,
      *   this is an instance of the prototypical template info
      * @protected
+     * @suppress {missingProperties} go/missingfnprops
      */
     _bindTemplate(template, instanceBinding) {
       let templateInfo = this.constructor._parseTemplate(template);
@@ -4599,6 +4821,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {Object=} effect Effect metadata object
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static _addTemplatePropertyEffect(templateInfo, prop, effect) {
       let hostProps = templateInfo.hostProps = templateInfo.hostProps || {};
@@ -4659,6 +4882,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Removes and unbinds the nodes previously contained in the provided
      * DocumentFragment returned from `_stampTemplate`.
      *
+     * @override
      * @param {!StampedTemplate} dom DocumentFragment previously returned
      *   from `_stampTemplate` associated with the nodes to be removed
      * @return {void}
@@ -4695,7 +4919,6 @@ const PropertyEffects = dedupingMixin(superClass => {
      * with one or more metadata objects capturing the source(s) of the
      * binding.
      *
-     * @override
      * @param {Node} node Node to parse
      * @param {TemplateInfo} templateInfo Template metadata for current template
      * @param {NodeInfo} nodeInfo Node metadata for current template node
@@ -4703,9 +4926,13 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   metadata to `nodeInfo`
      * @protected
      * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
      */
     static _parseTemplateNode(node, templateInfo, nodeInfo) {
-      let noted = super._parseTemplateNode(node, templateInfo, nodeInfo);
+      // TODO(https://github.com/google/closure-compiler/issues/3240):
+      //     Change back to just super.methodCall()
+      let noted = propertyEffectsBase._parseTemplateNode.call(
+        this, node, templateInfo, nodeInfo);
       if (node.nodeType === Node.TEXT_NODE) {
         let parts = this._parseBindings(node.textContent, templateInfo);
         if (parts) {
@@ -4728,7 +4955,6 @@ const PropertyEffects = dedupingMixin(superClass => {
      * with one or more metadata objects capturing the source(s) of the
      * binding.
      *
-     * @override
      * @param {Element} node Node to parse
      * @param {TemplateInfo} templateInfo Template metadata for current template
      * @param {NodeInfo} nodeInfo Node metadata for current template node
@@ -4738,6 +4964,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   metadata to `nodeInfo`
      * @protected
      * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
      */
     static _parseTemplateNodeAttribute(node, templateInfo, nodeInfo, name, value) {
       let parts = this._parseBindings(value, templateInfo);
@@ -4757,6 +4984,11 @@ const PropertyEffects = dedupingMixin(superClass => {
         // Initialize attribute bindings with any literal parts
         let literal = literalFromParts(parts);
         if (literal && kind == 'attribute') {
+          // Ensure a ShadyCSS template scoped style is not removed
+          // when a class$ binding's initial literal value is set.
+          if (name == 'class' && node.hasAttribute('class')) {
+            literal += ' ' + node.getAttribute(name);
+          }
           node.setAttribute(name, literal);
         }
         // Clear attribute before removing, since IE won't allow removing
@@ -4778,7 +5010,10 @@ const PropertyEffects = dedupingMixin(superClass => {
         addBinding(this, templateInfo, nodeInfo, kind, name, parts, literal);
         return true;
       } else {
-        return super._parseTemplateNodeAttribute(node, templateInfo, nodeInfo, name, value);
+        // TODO(https://github.com/google/closure-compiler/issues/3240):
+        //     Change back to just super.methodCall()
+        return propertyEffectsBase._parseTemplateNodeAttribute.call(
+          this, node, templateInfo, nodeInfo, name, value);
       }
     }
 
@@ -4787,7 +5022,6 @@ const PropertyEffects = dedupingMixin(superClass => {
      * binding the properties that a nested template depends on to the template
      * as `_host_<property>`.
      *
-     * @override
      * @param {Node} node Node to parse
      * @param {TemplateInfo} templateInfo Template metadata for current template
      * @param {NodeInfo} nodeInfo Node metadata for current template node
@@ -4795,9 +5029,13 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   metadata to `nodeInfo`
      * @protected
      * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
      */
     static _parseTemplateNestedTemplate(node, templateInfo, nodeInfo) {
-      let noted = super._parseTemplateNestedTemplate(node, templateInfo, nodeInfo);
+      // TODO(https://github.com/google/closure-compiler/issues/3240):
+      //     Change back to just super.methodCall()
+      let noted = propertyEffectsBase._parseTemplateNestedTemplate.call(
+        this, node, templateInfo, nodeInfo);
       // Merge host props into outer template and add bindings
       let hostProps = nodeInfo.templateInfo.hostProps;
       let mode = '{';
@@ -4851,6 +5089,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {Object} templateInfo Current template metadata
      * @return {Array<!BindingPart>} Array of binding part metadata
      * @protected
+     * @nocollapse
      */
     static _parseBindings(text, templateInfo) {
       let parts = [];
@@ -4923,8 +5162,8 @@ const PropertyEffects = dedupingMixin(superClass => {
      * Called to evaluate a previously parsed binding part based on a set of
      * one or more changed dependencies.
      *
-     * @param {this} inst Element that should be used as scope for
-     *   binding dependencies
+     * @param {!Polymer_PropertyEffects} inst Element that should be used as
+     *     scope for binding dependencies
      * @param {BindingPart} part Binding part metadata
      * @param {string} path Property/path that triggered this effect
      * @param {Object} props Bag of current property changes
@@ -4932,6 +5171,7 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @param {boolean} hasPaths True with `props` contains one or more paths
      * @return {*} Value the binding part evaluated to
      * @protected
+     * @nocollapse
      */
     static _evaluateBinding(inst, part, path, props, oldProps, hasPaths) {
       let value;
@@ -5028,6 +5268,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 */
 
 /**
+ * Registers a class prototype for telemetry purposes.
+ * @param {!PolymerElementConstructor} prototype Element prototype to register
+ * @protected
+ */
+function register(prototype) {
+}
+
+/**
+@license
+Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+*/
+
+/**
  * Creates a copy of `props` with each property normalized such that
  * upgraded it is an object with at least a type property { type: Type}.
  *
@@ -5061,6 +5319,9 @@ function normalizeProperties(props) {
  * @appliesMixin PropertiesChanged
  * @summary Mixin that provides a minimal starting point for using
  * the PropertiesChanged mixin by providing a declarative `properties` object.
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const PropertiesMixin = dedupingMixin(superClass => {
 
@@ -5127,10 +5388,15 @@ const PropertiesMixin = dedupingMixin(superClass => {
     * Implements standard custom elements getter to observes the attributes
     * listed in `properties`.
     * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+    * @nocollapse
     */
    static get observedAttributes() {
-     const props = this._properties;
-     return props ? Object.keys(props).map(p => this.attributeNameForProperty(p)) : [];
+     if (!this.hasOwnProperty(JSCompiler_renameProperty('__observedAttributes', this))) {
+       register(this.prototype);
+       const props = this._properties;
+       this.__observedAttributes = props ? Object.keys(props).map(p => this.attributeNameForProperty(p)) : [];
+     }
+     return this.__observedAttributes;
    }
 
    /**
@@ -5139,6 +5405,7 @@ const PropertiesMixin = dedupingMixin(superClass => {
     * accessors exist on the element prototype. This method calls
     * `_finalizeClass` to finalize each constructor in the prototype chain.
     * @return {void}
+    * @nocollapse
     */
    static finalize() {
      if (!this.hasOwnProperty(JSCompiler_renameProperty('__finalized', this))) {
@@ -5157,11 +5424,12 @@ const PropertiesMixin = dedupingMixin(superClass => {
     * `finalize` and finalizes the class constructor.
     *
     * @protected
+    * @nocollapse
     */
    static _finalizeClass() {
      const props = ownProperties(/** @type {!PropertiesMixinConstructor} */(this));
      if (props) {
-       this.createProperties(props);
+       /** @type {?} */ (this).createProperties(props);
      }
    }
 
@@ -5172,6 +5440,7 @@ const PropertiesMixin = dedupingMixin(superClass => {
     *
     * @return {Object} Object containing properties for this class
     * @protected
+    * @nocollapse
     */
    static get _properties() {
      if (!this.hasOwnProperty(
@@ -5191,6 +5460,7 @@ const PropertiesMixin = dedupingMixin(superClass => {
     * @return {*} Type to which to deserialize attribute
     *
     * @protected
+    * @nocollapse
     */
    static typeForProperty(name) {
      const info = this._properties[name];
@@ -5242,20 +5512,24 @@ const PropertiesMixin = dedupingMixin(superClass => {
 });
 
 /**
-@license
-Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
-*/
+ * @fileoverview
+ * @suppress {checkPrototypalTypes}
+ * @license Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+ * This code may only be used under the BSD style license found at
+ * http://polymer.github.io/LICENSE.txt The complete set of authors may be found
+ * at http://polymer.github.io/AUTHORS.txt The complete set of contributors may
+ * be found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by
+ * Google as part of the polymer project is also subject to an additional IP
+ * rights grant found at http://polymer.github.io/PATENTS.txt
+ */
 
 /**
  * Current Polymer version in Semver notation.
  * @type {string} Semver notation of the current version of Polymer.
  */
-const version = '3.0.5';
+const version = '3.3.1';
+
+const builtCSS = window.ShadyCSS && window.ShadyCSS['cssBuild'];
 
 /**
  * Element class mixin that provides the core API for Polymer's meta-programming
@@ -5324,14 +5598,16 @@ const version = '3.0.5';
  *   import strategies.
  * @summary Element class mixin that provides the core API for Polymer's
  * meta-programming features.
+ * @template T
+ * @param {function(new:T)} superClass Class to apply mixin to.
+ * @return {function(new:T)} superClass with mixin applied.
  */
 const ElementMixin = dedupingMixin(base => {
-
   /**
    * @constructor
-   * @extends {base}
    * @implements {Polymer_PropertyEffects}
    * @implements {Polymer_PropertiesMixin}
+   * @extends {HTMLElement}
    * @private
    */
   const polymerElementBase = PropertiesMixin(PropertyEffects(base));
@@ -5372,9 +5648,11 @@ const ElementMixin = dedupingMixin(base => {
   function ownObservers(constructor) {
     if (!constructor.hasOwnProperty(
       JSCompiler_renameProperty('__ownObservers', constructor))) {
-        constructor.__ownObservers =
-        constructor.hasOwnProperty(JSCompiler_renameProperty('observers', constructor)) ?
-        /** @type {PolymerElementConstructor} */ (constructor).observers : null;
+      constructor.__ownObservers =
+          constructor.hasOwnProperty(
+              JSCompiler_renameProperty('observers', constructor)) ?
+          /** @type {PolymerElementConstructor} */ (constructor).observers :
+          null;
     }
     return constructor.__ownObservers;
   }
@@ -5426,7 +5704,6 @@ const ElementMixin = dedupingMixin(base => {
    * disables the effect, the setter would fail unexpectedly.
    * Based on feedback, we may want to try to make effects more malleable
    * and/or provide an advanced api for manipulating them.
-   * Also consider adding warnings when an effect cannot be changed.
    *
    * @param {!PolymerElement} proto Element class prototype to add accessors
    *   and effects to
@@ -5448,17 +5725,27 @@ const ElementMixin = dedupingMixin(base => {
     // setup where multiple triggers for setting a property)
     // While we do have `hasComputedEffect` this is set on the property's
     // dependencies rather than itself.
-    if (info.computed && !proto._hasReadOnlyEffect(name)) {
-      proto._createComputedProperty(name, info.computed, allProps);
+    if (info.computed) {
+      if (proto._hasReadOnlyEffect(name)) {
+        console.warn(`Cannot redefine computed property '${name}'.`);
+      } else {
+        proto._createComputedProperty(name, info.computed, allProps);
+      }
     }
     if (info.readOnly && !proto._hasReadOnlyEffect(name)) {
       proto._createReadOnlyProperty(name, !info.computed);
+    } else if (info.readOnly === false && proto._hasReadOnlyEffect(name)) {
+      console.warn(`Cannot make readOnly property '${name}' non-readOnly.`);
     }
     if (info.reflectToAttribute && !proto._hasReflectEffect(name)) {
       proto._createReflectedProperty(name);
+    } else if (info.reflectToAttribute === false && proto._hasReflectEffect(name)) {
+      console.warn(`Cannot make reflected property '${name}' non-reflected.`);
     }
     if (info.notify && !proto._hasNotifyEffect(name)) {
       proto._createNotifyingProperty(name);
+    } else if (info.notify === false && proto._hasNotifyEffect(name)) {
+      console.warn(`Cannot make notify property '${name}' non-notify.`);
     }
     // always add observer
     if (info.observer) {
@@ -5479,31 +5766,33 @@ const ElementMixin = dedupingMixin(base => {
    * @private
    */
   function processElementStyles(klass, template, is, baseURI) {
-    const templateStyles = template.content.querySelectorAll('style');
-    const stylesWithImports = stylesFromTemplate(template);
-    // insert styles from <link rel="import" type="css"> at the top of the template
-    const linkedStyles = stylesFromModuleImports(is);
-    const firstTemplateChild = template.content.firstElementChild;
-    for (let idx = 0; idx < linkedStyles.length; idx++) {
-      let s = linkedStyles[idx];
-      s.textContent = klass._processStyleText(s.textContent, baseURI);
-      template.content.insertBefore(s, firstTemplateChild);
-    }
-    // keep track of the last "concrete" style in the template we have encountered
-    let templateStyleIndex = 0;
-    // ensure all gathered styles are actually in this template.
-    for (let i = 0; i < stylesWithImports.length; i++) {
-      let s = stylesWithImports[i];
-      let templateStyle = templateStyles[templateStyleIndex];
-      // if the style is not in this template, it's been "included" and
-      // we put a clone of it in the template before the style that included it
-      if (templateStyle !== s) {
-        s = s.cloneNode(true);
-        templateStyle.parentNode.insertBefore(s, templateStyle);
-      } else {
-        templateStyleIndex++;
+    if (!builtCSS) {
+      const templateStyles = template.content.querySelectorAll('style');
+      const stylesWithImports = stylesFromTemplate(template);
+      // insert styles from <link rel="import" type="css"> at the top of the template
+      const linkedStyles = stylesFromModuleImports(is);
+      const firstTemplateChild = template.content.firstElementChild;
+      for (let idx = 0; idx < linkedStyles.length; idx++) {
+        let s = linkedStyles[idx];
+        s.textContent = klass._processStyleText(s.textContent, baseURI);
+        template.content.insertBefore(s, firstTemplateChild);
       }
-      s.textContent = klass._processStyleText(s.textContent, baseURI);
+      // keep track of the last "concrete" style in the template we have encountered
+      let templateStyleIndex = 0;
+      // ensure all gathered styles are actually in this template.
+      for (let i = 0; i < stylesWithImports.length; i++) {
+        let s = stylesWithImports[i];
+        let templateStyle = templateStyles[templateStyleIndex];
+        // if the style is not in this template, it's been "included" and
+        // we put a clone of it in the template before the style that included it
+        if (templateStyle !== s) {
+          s = s.cloneNode(true);
+          templateStyle.parentNode.insertBefore(s, templateStyle);
+        } else {
+          templateStyleIndex++;
+        }
+        s.textContent = klass._processStyleText(s.textContent, baseURI);
+      }
     }
     if (window.ShadyCSS) {
       window.ShadyCSS.prepareTemplate(template, is);
@@ -5513,8 +5802,8 @@ const ElementMixin = dedupingMixin(base => {
   /**
    * Look up template from dom-module for element
    *
-   * @param {!string} is Element name to look up
-   * @return {!HTMLTemplateElement} Template found in dom module, or
+   * @param {string} is Element name to look up
+   * @return {?HTMLTemplateElement|undefined} Template found in dom module, or
    *   undefined if not found
    * @protected
    */
@@ -5523,7 +5812,8 @@ const ElementMixin = dedupingMixin(base => {
     // Under strictTemplatePolicy in 3.x+, dom-module lookup is only allowed
     // when opted-in via allowTemplateFromDomModule
     if (is && (!strictTemplatePolicy || allowTemplateFromDomModule)) {
-      template = DomModule.import(is, 'template');
+      template = /** @type {?HTMLTemplateElement} */ (
+          DomModule.import(is, 'template'));
       // Under strictTemplatePolicy, require any element with an `is`
       // specified to have a dom-module
       if (strictTemplatePolicy && !template) {
@@ -5538,12 +5828,14 @@ const ElementMixin = dedupingMixin(base => {
    * @mixinClass
    * @unrestricted
    * @implements {Polymer_ElementMixin}
+   * @extends {polymerElementBase}
    */
   class PolymerElement extends polymerElementBase {
 
     /**
      * Current Polymer version in Semver notation.
      * @type {string} Semver notation of the current version of Polymer.
+     * @nocollapse
      */
     static get polymerElementVersion() {
       return version;
@@ -5554,43 +5846,49 @@ const ElementMixin = dedupingMixin(base => {
      * find the template.
      * @return {void}
      * @protected
-     * @override
      * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
      */
-   static _finalizeClass() {
-      super._finalizeClass();
-      if (this.hasOwnProperty(
-        JSCompiler_renameProperty('is', this)) &&  this.is) {
-        register(this.prototype);
-      }
+    static _finalizeClass() {
+      // TODO(https://github.com/google/closure-compiler/issues/3240):
+      //     Change back to just super.methodCall()
+      polymerElementBase._finalizeClass.call(this);
       const observers = ownObservers(this);
       if (observers) {
         this.createObservers(observers, this._properties);
       }
+      this._prepareTemplate();
+    }
+
+    /** @nocollapse */
+    static _prepareTemplate() {
       // note: create "working" template that is finalized at instance time
       let template = /** @type {PolymerElementConstructor} */ (this).template;
       if (template) {
         if (typeof template === 'string') {
           console.error('template getter must return HTMLTemplateElement');
           template = null;
-        } else {
+        } else if (!legacyOptimizations) {
           template = template.cloneNode(true);
         }
       }
 
+      /** @override */
       this.prototype._template = template;
     }
 
     /**
      * Override of PropertiesChanged createProperties to create accessors
      * and property effects for all of the properties.
+     * @param {!Object} props .
      * @return {void}
      * @protected
-     * @override
+     * @nocollapse
      */
-     static createProperties(props) {
+    static createProperties(props) {
       for (let p in props) {
-        createPropertyFromConfig(this.prototype, p, props[p], props);
+        createPropertyFromConfig(
+            /** @type {?} */ (this.prototype), p, props[p], props);
       }
     }
 
@@ -5604,6 +5902,7 @@ const ElementMixin = dedupingMixin(base => {
      *   reference is changed
      * @return {void}
      * @protected
+     * @nocollapse
      */
     static createObservers(observers, dynamicFns) {
       const proto = this.prototype;
@@ -5647,6 +5946,7 @@ const ElementMixin = dedupingMixin(base => {
      *   }
      *
      * @return {!HTMLTemplateElement|string} Template to be stamped
+     * @nocollapse
      */
     static get template() {
       // Explanation of template-related properties:
@@ -5681,6 +5981,7 @@ const ElementMixin = dedupingMixin(base => {
      * Set the template.
      *
      * @param {!HTMLTemplateElement|string} value Template to set.
+     * @nocollapse
      */
     static set template(value) {
       this._template = value;
@@ -5704,6 +6005,7 @@ const ElementMixin = dedupingMixin(base => {
      *
      * @return {string} The import path for this element class
      * @suppress {missingProperties}
+     * @nocollapse
      */
     static get importPath() {
       if (!this.hasOwnProperty(JSCompiler_renameProperty('_importPath', this))) {
@@ -5745,7 +6047,7 @@ const ElementMixin = dedupingMixin(base => {
      *
      * @return {void}
      * @override
-     * @suppress {invalidCasts}
+     * @suppress {invalidCasts,missingProperties} go/missingfnprops
      */
     _initializeProperties() {
       this.constructor.finalize();
@@ -5788,6 +6090,7 @@ const ElementMixin = dedupingMixin(base => {
      * @param {string} baseURI Base URI to rebase CSS paths against
      * @return {string} The processed CSS text
      * @protected
+     * @nocollapse
      */
     static _processStyleText(cssText, baseURI) {
       return resolveCss(cssText, baseURI);
@@ -5801,6 +6104,7 @@ const ElementMixin = dedupingMixin(base => {
     * @param {string} is Tag name (or type extension name) for this element
     * @return {void}
     * @protected
+    * @nocollapse
     */
     static _finalizeTemplate(is) {
       /** @const {HTMLTemplateElement} */
@@ -5823,7 +6127,9 @@ const ElementMixin = dedupingMixin(base => {
      * flushes any pending properties, and updates shimmed CSS properties
      * when using the ShadyCSS scoping/custom properties polyfill.
      *
-     * @suppress {missingProperties, invalidCasts} Super may or may not implement the callback
+     * @override
+     * @suppress {missingProperties, invalidCasts} Super may or may not
+     *     implement the callback
      * @return {void}
      */
     connectedCallback() {
@@ -5875,19 +6181,24 @@ const ElementMixin = dedupingMixin(base => {
      * However, this method may be overridden to allow an element
      * to put its dom in another location.
      *
+     * @override
      * @throws {Error}
      * @suppress {missingReturn}
      * @param {StampedTemplate} dom to attach to the element.
      * @return {ShadowRoot} node to which the dom has been attached.
      */
     _attachDom(dom) {
-      if (this.attachShadow) {
+      const n = wrap(this);
+      if (n.attachShadow) {
         if (dom) {
-          if (!this.shadowRoot) {
-            this.attachShadow({mode: 'open'});
+          if (!n.shadowRoot) {
+            n.attachShadow({mode: 'open', shadyUpgradeFragment: dom});
+            n.shadowRoot.appendChild(dom);
           }
-          this.shadowRoot.appendChild(dom);
-          return this.shadowRoot;
+          if (syncInitialRender && window.ShadyDOM) {
+            window.ShadyDOM.flushInitial(n.shadowRoot);
+          }
+          return n.shadowRoot;
         }
         return null;
       } else {
@@ -5914,6 +6225,7 @@ const ElementMixin = dedupingMixin(base => {
      * Note: This function does not support updating CSS mixins.
      * You can not dynamically change the value of an `@apply`.
      *
+     * @override
      * @param {Object=} properties Bag of custom property key/values to
      *   apply to this element.
      * @return {void}
@@ -5935,6 +6247,7 @@ const ElementMixin = dedupingMixin(base => {
      * with `/` (absolute URLs) or `#` (hash identifiers).  For general purpose
      * URL resolution, use `window.URL`.
      *
+     * @override
      * @param {string} url URL to resolve.
      * @param {string=} base Optional base URL to resolve against, defaults
      * to the element's `importPath`
@@ -5948,32 +6261,61 @@ const ElementMixin = dedupingMixin(base => {
     }
 
     /**
-     * Overrides `PropertyAccessors` to add map of dynamic functions on
+     * Overrides `PropertyEffects` to add map of dynamic functions on
      * template info, for consumption by `PropertyEffects` template binding
      * code. This map determines which method templates should have accessors
      * created for them.
      *
-     * @override
+     * @param {!HTMLTemplateElement} template Template
+     * @param {!TemplateInfo} templateInfo Template metadata for current template
+     * @param {!NodeInfo} nodeInfo Node metadata for current template.
+     * @return {boolean} .
      * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
      */
     static _parseTemplateContent(template, templateInfo, nodeInfo) {
       templateInfo.dynamicFns = templateInfo.dynamicFns || this._properties;
-      return super._parseTemplateContent(template, templateInfo, nodeInfo);
+      // TODO(https://github.com/google/closure-compiler/issues/3240):
+      //     Change back to just super.methodCall()
+      return polymerElementBase._parseTemplateContent.call(
+        this, template, templateInfo, nodeInfo);
+    }
+
+    /**
+     * Overrides `PropertyEffects` to warn on use of undeclared properties in
+     * template.
+     *
+     * @param {Object} templateInfo Template metadata to add effect to
+     * @param {string} prop Property that should trigger the effect
+     * @param {Object=} effect Effect metadata object
+     * @return {void}
+     * @protected
+     * @suppress {missingProperties} Interfaces in closure do not inherit statics, but classes do
+     * @nocollapse
+     */
+    static _addTemplatePropertyEffect(templateInfo, prop, effect) {
+      // Warn if properties are used in template without being declared.
+      // Properties must be listed in `properties` to be included in
+      // `observedAttributes` since CE V1 reads that at registration time, and
+      // since we want to keep template parsing lazy, we can't automatically
+      // add undeclared properties used in templates to `observedAttributes`.
+      // The warning is only enabled in `legacyOptimizations` mode, since
+      // we don't want to spam existing users who might have adopted the
+      // shorthand when attribute deserialization is not important.
+      if (legacyOptimizations && !(prop in this._properties)) {
+        console.warn(`Property '${prop}' used in template but not declared in 'properties'; ` +
+          `attribute will not be observed.`);
+      }
+      // TODO(https://github.com/google/closure-compiler/issues/3240):
+      //     Change back to just super.methodCall()
+      return polymerElementBase._addTemplatePropertyEffect.call(
+        this, templateInfo, prop, effect);
     }
 
   }
 
   return PolymerElement;
 });
-
-/**
- * Registers a class prototype for telemetry purposes.
- * @param {HTMLElement} prototype Element prototype to register
- * @this {this}
- * @protected
- */
-function register(prototype) {
-}
 
 /**
 @license
