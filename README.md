@@ -8,6 +8,18 @@ See https://tillsc.github.io/component-frameworks-test/ for results
 
 ### Not natively buildable stuff
 
+Build stencil component by running
+
     npm run stencil
 
-Build Angular component as described in cli_based_builds/angular/README.md .
+Build Angular component:
+
+
+    cd cli_based_builds/angular
+    npm run build
+    npm run package
+
+Build svelte component:
+
+    cd cli_based_builds/svelte
+    npm run build
