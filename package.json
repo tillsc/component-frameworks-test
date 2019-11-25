@@ -5,17 +5,17 @@
     "stencil": "stencil build --config stencil.config.ts"
   },
   "dependencies": {
-    "faucet-pipeline-esnext": "^1.1.1",
-    "faucet-pipeline-js": "^1.1.1",
-    "faucet-pipeline-jsx": "^1.1.1",
-    "faucet-pipeline-static": "^1.1.0",
-    "faucet-pipeline-typescript": "^1.1.1",
-    "lit-element": "^2.2.1",
-    "pako": "^1.0.10",
-    "@polymer/polymer": "^3.3.1",
-    "@stencil/core": "^0.16.4",
-    "preact": "^8.5.3",
-    "react": "^16.12.0",
-    "react-dom": "^16.12.0"
+    "@polymer/polymer": ">=3.3.1",
+    "@stencil/core": ">=1.8.1",
+    "faucet-pipeline-esnext": "^2.0.9",
+    "faucet-pipeline-js": "^2.0.9",
+    "faucet-pipeline-jsx": "^2.0.9",
+    "faucet-pipeline-static": ">=1.1.0",
+    "faucet-pipeline-typescript": ">=2.0.9",
+    "lit-element": ">=2.2.1",
+    "pako": ">=1.0.10",
+    "preact": "^10.0.5",
+    "react": ">=16.12.0",
+    "react-dom": ">=16.12.0"
   }
 }

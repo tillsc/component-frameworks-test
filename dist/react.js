@@ -1,13 +1,9 @@
 (function (react) {
 'use strict';
 
-if(typeof global === "undefined" && typeof window !== "undefined") {
-	window.global = window;
-}
-
 react = react && react.hasOwnProperty('default') ? react['default'] : react;
 
-var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 function createCommonjsModule(fn, module) {
 	return module = { exports: {} }, fn(module, module.exports), module.exports;
@@ -16,7 +12,7 @@ function createCommonjsModule(fn, module) {
 var reactDom_production_min = createCommonjsModule(function (module, exports) {
 
 (function (la, m) {
-  module.exports = m(react);
+   module.exports = m(react) ;
 })(commonjsGlobal, function (la) {
   function m(a) {
     for (var b = "https://reactjs.org/docs/error-decoder.html?invariant=" + a, c = 1; c < arguments.length; c++) b += "&args[]=" + encodeURIComponent(arguments[c]);
@@ -1581,19 +1577,19 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
   }
 
   function Lc(a) {
-    B(Q, a);
-    B(L, a);
+    B(Q);
+    B(L);
   }
 
   function oe(a) {
-    B(Q, a);
-    B(L, a);
+    B(Q);
+    B(L);
   }
 
   function Hg(a, b, c) {
     if (L.current !== Da) throw Error(m(168));
-    y(L, b, a);
-    y(Q, c, a);
+    y(L, b);
+    y(Q, c);
   }
 
   function Ig(a, b, c) {
@@ -1611,16 +1607,16 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
     var b = a.stateNode;
     b = b && b.__reactInternalMemoizedMergedChildContext || Da;
     Sa = L.current;
-    y(L, b, a);
-    y(Q, Q.current, a);
+    y(L, b);
+    y(Q, Q.current);
     return !0;
   }
 
   function Jg(a, b, c) {
     var d = a.stateNode;
     if (!d) throw Error(m(169));
-    c ? (b = Ig(a, b, Sa), d.__reactInternalMemoizedMergedChildContext = b, B(Q, a), B(L, a), y(L, b, a)) : B(Q, a);
-    y(Q, c, a);
+    c ? (b = Ig(a, b, Sa), d.__reactInternalMemoizedMergedChildContext = b, B(Q), B(L), y(L, b)) : B(Q);
+    y(Q, c);
   }
 
   function pe() {
@@ -1737,13 +1733,13 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
 
   function Ug(a, b) {
     var c = a.type._context;
-    y(te, c._currentValue, a);
+    y(te, c._currentValue);
     c._currentValue = b;
   }
 
   function ue(a) {
     var b = te.current;
-    B(te, a);
+    B(te);
     a.type._context._currentValue = b;
   }
 
@@ -2291,9 +2287,9 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
   }
 
   function ze(a, b) {
-    y(Xb, b, a);
-    y(Yb, a, a);
-    y(fa, Wb, a);
+    y(Xb, b);
+    y(Yb, a);
+    y(fa, Wb);
     var c = b.nodeType;
 
     switch (c) {
@@ -2306,25 +2302,25 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
         c = c === Pa ? b.parentNode : b, b = c.namespaceURI || null, c = c.tagName, b = Od(b, c);
     }
 
-    B(fa, a);
-    y(fa, b, a);
+    B(fa);
+    y(fa, b);
   }
 
   function tb(a) {
-    B(fa, a);
-    B(Yb, a);
-    B(Xb, a);
+    B(fa);
+    B(Yb);
+    B(Xb);
   }
 
   function hh(a) {
     Ua(Xb.current);
     var b = Ua(fa.current);
     var c = Od(b, a.type);
-    b !== c && (y(Yb, a, a), y(fa, c, a));
+    b !== c && (y(Yb, a), y(fa, c));
   }
 
   function Ae(a) {
-    Yb.current === a && (B(fa, a), B(Yb, a));
+    Yb.current === a && (B(fa), B(Yb));
   }
 
   function bd(a) {
@@ -2854,7 +2850,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
         h;
     (h = 0 !== (b.effectTag & 64)) || (h = 0 !== (f & 2) && (null === a || null !== a.memoizedState));
     h ? (g = !0, b.effectTag &= -65) : null !== a && null === a.memoizedState || void 0 === e.fallback || !0 === e.unstable_avoidThisFallback || (f |= 1);
-    y(A, f & 1, b);
+    y(A, f & 1);
 
     if (null === a) {
       void 0 !== e.fallback && Ie(b);
@@ -2968,7 +2964,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
       }
       d &= 1;
     }
-    y(A, d, b);
+    y(A, d);
     if (0 === (b.mode & 2)) b.memoizedState = null;else switch (e) {
       case "forwards":
         c = b.child;
@@ -3057,11 +3053,11 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
   function yj(a, b) {
     switch (a.tag) {
       case 1:
-        return K(a.type) && Lc(a), b = a.effectTag, b & 4096 ? (a.effectTag = b & -4097 | 64, a) : null;
+        return K(a.type) && Lc(), b = a.effectTag, b & 4096 ? (a.effectTag = b & -4097 | 64, a) : null;
 
       case 3:
-        tb(a);
-        oe(a);
+        tb();
+        oe();
         b = a.effectTag;
         if (0 !== (b & 64)) throw Error(m(285));
         a.effectTag = b & -4097 | 64;
@@ -3071,13 +3067,13 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
         return Ae(a), null;
 
       case 13:
-        return B(A, a), b = a.effectTag, b & 4096 ? (a.effectTag = b & -4097 | 64, a) : null;
+        return B(A), b = a.effectTag, b & 4096 ? (a.effectTag = b & -4097 | 64, a) : null;
 
       case 19:
-        return B(A, a), null;
+        return B(A), null;
 
       case 4:
-        return tb(a), null;
+        return tb(), null;
 
       case 10:
         return ue(a), null;
@@ -3872,12 +3868,12 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
       switch (d.tag) {
         case 1:
           var e = d.type.childContextTypes;
-          null !== e && void 0 !== e && Lc(d);
+          null !== e && void 0 !== e && Lc();
           break;
 
         case 3:
-          tb(d);
-          oe(d);
+          tb();
+          oe();
           break;
 
         case 5:
@@ -3885,15 +3881,15 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
           break;
 
         case 4:
-          tb(d);
+          tb();
           break;
 
         case 13:
-          B(A, d);
+          B(A);
           break;
 
         case 19:
-          B(A, d);
+          B(A);
           break;
 
         case 10:
@@ -4088,12 +4084,12 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
               break;
 
             case 1:
-              K(b.type) && Lc(b);
+              K(b.type) && Lc();
               break;
 
             case 3:
-              tb(b);
-              oe(b);
+              tb();
+              oe();
               e = b.stateNode;
               e.pendingContext && (e.context = e.pendingContext, e.pendingContext = null);
               (null === c || null === c.child) && ed(b) && zb(b);
@@ -4206,7 +4202,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
                   }) : (c = c.createElement(d), "select" === d && (g = c, e.multiple ? g.multiple = !0 : e.size && (g.size = e.size))) : c = c.createElementNS(g, d);
                   c[Ba] = h;
                   c[Ic] = e;
-                  Nj(c, b, !1, !1);
+                  Nj(c, b, !1);
                   b.stateNode = c;
                   var p = be(d, e);
 
@@ -4340,7 +4336,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
               break;
 
             case 13:
-              B(A, b);
+              B(A);
               e = b.memoizedState;
 
               if (0 !== (b.effectTag & 64)) {
@@ -4368,7 +4364,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
               break;
 
             case 4:
-              tb(b);
+              tb();
               break;
 
             case 10:
@@ -4382,11 +4378,11 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
               break;
 
             case 17:
-              K(b.type) && Lc(b);
+              K(b.type) && Lc();
               break;
 
             case 19:
-              B(A, b);
+              B(A);
               e = b.memoizedState;
               if (null === e) break;
               f = 0 !== (b.effectTag & 64);
@@ -4411,7 +4407,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
                         responders: c.responders
                       }), f = f.sibling;
 
-                      y(A, A.current & 1 | 2, b);
+                      y(A, A.current & 1 | 2);
                       b = b.child;
                       break a;
                     }
@@ -4439,7 +4435,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
                 d.sibling = null;
                 e = A.current;
                 e = f ? e & 1 | 2 : e & 1;
-                y(A, e, b);
+                y(A, e);
                 b = d;
                 break a;
               }
@@ -6709,12 +6705,12 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
               if (null !== b.memoizedState) {
                 d = b.child.childExpirationTime;
                 if (0 !== d && d >= c) return Dh(a, b, c);
-                y(A, A.current & 1, b);
+                y(A, A.current & 1);
                 b = ra(a, b, c);
                 return null !== b ? b.sibling : null;
               }
 
-              y(A, A.current & 1, b);
+              y(A, A.current & 1);
               break;
 
             case 19:
@@ -6727,7 +6723,7 @@ var reactDom_production_min = createCommonjsModule(function (module, exports) {
 
               e = b.memoizedState;
               null !== e && (e.rendering = null, e.tail = null);
-              y(A, A.current, b);
+              y(A, A.current);
               if (!d) return null;
           }
 
@@ -7145,7 +7141,7 @@ class ReactEmpty extends HTMLElement {
       mode: 'open'
     }).appendChild(mountPoint);
     let text = this.getAttribute('text');
-    reactDom_production_min.render(React.createElement(React.Fragment, null, React.createElement("style", null, ":host  ", '{', " border: 1px solid red; padding: 0.5em; ", '}', " "), text), mountPoint);
+    reactDom_production_min.render(React.createElement(React.Fragment, null, React.createElement("style", null, ":host ", '{', " border: 1px solid red; padding: 0.5em; ", '}', " "), React.createElement("span", null, text, React.createElement("small", null, " - ", React.version))), mountPoint);
   }
 
 }

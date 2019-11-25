@@ -1,10 +1,6 @@
 (function () {
 'use strict';
 
-if(typeof global === "undefined" && typeof window !== "undefined") {
-	window.global = window;
-}
-
 class EmptyComponent extends HTMLElement {
 
   constructor() {

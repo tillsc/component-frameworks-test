@@ -1,10 +1,6 @@
 (function () {
 'use strict';
 
-if(typeof global === "undefined" && typeof window !== "undefined") {
-	window.global = window;
-}
-
 /**
  * @license
  * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
@@ -604,9 +600,9 @@ class AttributePart {
     }
     commit() {
         while (isDirective(this.value)) {
-            const directive$$1 = this.value;
+            const directive = this.value;
             this.value = noChange;
-            directive$$1(this);
+            directive(this);
         }
         if (this.value === noChange) {
             return;
@@ -672,9 +668,9 @@ class NodePart {
     }
     commit() {
         while (isDirective(this.__pendingValue)) {
-            const directive$$1 = this.__pendingValue;
+            const directive = this.__pendingValue;
             this.__pendingValue = noChange;
-            directive$$1(this);
+            directive(this);
         }
         const value = this.__pendingValue;
         if (value === noChange) {
@@ -820,9 +816,9 @@ class BooleanAttributePart {
     }
     commit() {
         while (isDirective(this.__pendingValue)) {
-            const directive$$1 = this.__pendingValue;
+            const directive = this.__pendingValue;
             this.__pendingValue = noChange;
-            directive$$1(this);
+            directive(this);
         }
         if (this.__pendingValue === noChange) {
             return;
@@ -907,9 +903,9 @@ class EventPart {
     }
     commit() {
         while (isDirective(this.__pendingValue)) {
-            const directive$$1 = this.__pendingValue;
+            const directive = this.__pendingValue;
             this.__pendingValue = noChange;
-            directive$$1(this);
+            directive(this);
         }
         if (this.__pendingValue === noChange) {
             return;
@@ -2127,20 +2123,6 @@ _a = finalized;
  * Marks class as having finished creating properties.
  */
 UpdatingElement[_a] = true;
-
-/**
- * @license
- * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
- * This code may only be used under the BSD style license found at
- * http://polymer.github.io/LICENSE.txt
- * The complete set of authors may be found at
- * http://polymer.github.io/AUTHORS.txt
- * The complete set of contributors may be found at
- * http://polymer.github.io/CONTRIBUTORS.txt
- * Code distributed by Google as part of the polymer project is also
- * subject to an additional IP rights grant found at
- * http://polymer.github.io/PATENTS.txt
- */
 
 /**
 @license

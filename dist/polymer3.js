@@ -1,10 +1,6 @@
 (function () {
 'use strict';
 
-if(typeof global === "undefined" && typeof window !== "undefined") {
-	window.global = window;
-}
-
 /**
 @license
 Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
@@ -132,9 +128,7 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 */
-const useShadow = !(window.ShadyDOM);
 const useNativeCSSProperties = Boolean(!window.ShadyCSS || window.ShadyCSS.nativeCss);
-const useNativeCustomElements = !(window.customElements.polyfillWrapFlushCallback);
 
 
 /**
@@ -4200,8 +4194,8 @@ const PropertyEffects = dedupingMixin(superClass => {
      *   is undefined.
      * @public
      */
-    get(path, root$$1) {
-      return get(root$$1 || this, path);
+    get(path, root) {
+      return get(root || this, path);
     }
 
     /**
@@ -4226,9 +4220,9 @@ const PropertyEffects = dedupingMixin(superClass => {
      * @return {void}
      * @public
      */
-    set(path, value, root$$1) {
-      if (root$$1) {
-        set(root$$1, path, value);
+    set(path, value, root) {
+      if (root) {
+        set(root, path, value);
       } else {
         if (!this[TYPES.READ_ONLY] || !this[TYPES.READ_ONLY][/** @type {string} */(path)]) {
           if (this._setPendingPropertyOrPath(path, value, true)) {
@@ -4583,12 +4577,12 @@ const PropertyEffects = dedupingMixin(superClass => {
         let {name, structured, wildcard, value, literal} = args[i];
         if (!literal) {
           if (wildcard) {
-            const matches$$1 = isDescendant(name, path);
-            const pathValue = getArgValue(data, props, matches$$1 ? path : name);
+            const matches = isDescendant(name, path);
+            const pathValue = getArgValue(data, props, matches ? path : name);
             value = {
-              path: matches$$1 ? path : name,
+              path: matches ? path : name,
               value: pathValue,
-              base: matches$$1 ? get(data, name) : pathValue
+              base: matches ? get(data, name) : pathValue
             };
           } else {
             value = structured ? getArgValue(data, props, name) : data[name];

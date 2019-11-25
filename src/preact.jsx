@@ -6,7 +6,10 @@ class PreactEmpty extends HTMLElement {
     this.attachShadow({ mode: 'open' }).appendChild(mountPoint);
     let text = this.getAttribute('text');
 
-    render(<span><style>:host  {'{'} border: 1px solid red; padding: 0.5em; {'}'} </style>{text}</span>, mountPoint);
+    render(<span>
+      <style>:host  {'{'} border: 1px solid red; padding: 0.5em; {'}'} </style>
+      {text}
+    </span>, mountPoint);
   }
 }
 

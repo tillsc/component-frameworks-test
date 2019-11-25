@@ -6,7 +6,12 @@ class ReactEmpty extends HTMLElement {
     this.attachShadow({ mode: 'open' }).appendChild(mountPoint);
     let text = this.getAttribute('text');
 
-    ReactDOM.render(<><style>:host  {'{'} border: 1px solid red; padding: 0.5em; {'}'} </style>{text}</>, mountPoint);
+    ReactDOM.render(<>
+      <style>:host {'{'} border: 1px solid red; padding: 0.5em; {'}'} </style>
+      <span>
+        {text}<small> - {React.version}</small>
+      </span>
+    </>, mountPoint);
   }
 }
 
