@@ -13,4 +13,4 @@ class PreactEmpty extends HTMLElement {
   }
 }
 
-customElements.define('preact-empty', PreactEmpty);
+customElements.define('preact-vanilla-empty', PreactEmpty);

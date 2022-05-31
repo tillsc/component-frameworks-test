@@ -4,9 +4,8 @@
   <script src="dist/vanilla.js"></script>
   <script src="dist/polymer3.js"></script>
   <script src="dist/lit-element.js"></script>
-  <script src="dist/preact.js"></script>
-  <script src="dist/react_shim.js"></script>
-  <script src="dist/react.js"></script>
+  <script src="dist/preact-vanilla.js"></script>
+  <script src="dist/preact-custom-element.js"></script>
   <script src="dist/svelte.js"></script>
   <script src="dist/stencil/stencil-empty.js"></script>
   <script src="dist/angular.js"></script>
@@ -22,7 +21,7 @@
   <p><size-elm src="dist/polymer3.js"></size-elm></p>
   <polymer3-empty text="Hello from Polymer 3"></polymer3-empty>
 
-  <h3>Polymer Lit-Element</h3>
+  <h3>Lit-Element</h3>
   <p><size-elm src="dist/lit-element.js"></size-elm></p>
   <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
 
@@ -42,18 +41,13 @@
   </ul>
   <stencil-empty text="Hello from Stencil"></stencil-empty>
 
-  <h3>Preact</h3>
-  <ul>
-    <li>Code incl. Preact core: <size-elm src="dist/preact.js"></size-elm></li>
-  </ul>
-  <preact-empty text="Hello from Preact"></preact-empty>
+  <h3>preact-custom-element</h3>
+  <p><size-elm src="dist/preact-custom-element.js"></size-elm></p>
+  <preact-custom-element-empty text="Hello from preact-custom-element"></preact-custom-element-empty>
 
-  <h3>React</h3>
-  <ul>
-    <li>Code + React-DOM: <size-elm src="dist/react.js"></size-elm></li>
-    <li>React: <size-elm src="dist/react_shim.js"></size-elm></li>
-  </ul>
-  <react-empty text="Hello from React"></react-empty>
+  <h3>Preact "vanilla"</h3>
+  <p><size-elm src="dist/preact-vanilla.js"></size-elm></p>
+  <preact-vanilla-empty text="Hello from Preact"></preact-vanilla-empty>
 </body>
 
 </html>

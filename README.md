@@ -14,7 +14,6 @@ Build stencil component by running
 
 Build Angular component:
 
-
     cd cli_based_builds/angular
     npm run build
     npm run package

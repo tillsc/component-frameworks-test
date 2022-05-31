@@ -12,18 +12,13 @@ module.exports = {
     target: "./dist/lit-element.js"
   },
   {
-    source: "./src/react_shim.js",
-    target: "./dist/react_shim.js",
+    source: "./src/preact-vanilla.jsx",
+    target: "./dist/preact-vanilla.js",
+    jsx: { pragma: "h" }
   },
   {
-    source: "./src/react.jsx",
-    target: "./dist/react.js",
-    jsx: true,
-    externals: { react: "React" }
-  },
-  {
-    source: "./src/preact.jsx",
-    target: "./dist/preact.js",
+    source: "./src/preact-custom-element.jsx",
+    target: "./dist/preact-custom-element.js",
     jsx: { pragma: "h" }
   },
   {

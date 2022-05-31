@@ -14,8 +14,6 @@
     "faucet-pipeline-typescript": ">=2.0.9",
     "lit-element": ">=2.2.1",
     "pako": ">=1.0.10",
-    "preact": "^10.0.5",
-    "react": ">=16.12.0",
-    "react-dom": ">=16.12.0"
+    "preact-custom-element": ">=4"
   }
 }

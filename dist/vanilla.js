@@ -34,4 +34,4 @@ class EmptyComponent extends HTMLElement {
 
 customElements.define('vanilla-empty', EmptyComponent);
 
-}());
+})();
