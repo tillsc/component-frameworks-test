@@ -1,4 +1,4 @@
-import {LitElement, html} from 'lit-element';
+import {LitElement, html} from 'https://cdn.jsdelivr.net/npm/lit-element@4.0.5/+esm';
 
 class LitElementEmpty extends LitElement {
 
