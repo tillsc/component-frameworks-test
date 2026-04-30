@@ -1,1 +1,4 @@
-{{text}}<br><small>Angular {{version}}</small>
+{{text}}<br>
+<button (click)="ping()">Ping</button>
+@if (lastPing()) { <span> ← {{lastPing()}}</span> }<br>
+<small style="text-align: right; display: block;">Angular {{version}}</small>
