@@ -2,16 +2,15 @@
 
 <head>
   <link rel="icon" href="data:image/png;base64,iVBORw0KGgo=">
-  <script src="dist/vanilla.js"></script>
-  <script src="dist/polymer3.js"></script>
-  <script src="dist/lit-element.js"></script>
-  <script src="dist/preact-vanilla.js"></script>
-  <script src="dist/preact-custom-element.js"></script>
+  <script type="module" src="dist/vanilla.js"></script>
+  <script type="module" src="dist/lit-element.js"></script>
+  <script type="module" src="dist/preact-vanilla.js"></script>
+  <script type="module" src="dist/preact-custom-element.js"></script>
   <script src="dist/svelte.js"></script>
   <script src="dist/stencil/stencil-empty.js"></script>
   <script src="dist/angular/runtime.js"></script>
   <script src="dist/angular/main.js"></script>
-  <script src="dist/util/size-elem.js"></script>
+  <script type="module" src="dist/util/size-elem.js"></script>
 </head>
 
 <body>
@@ -19,11 +18,7 @@
   <p><size-elm src="dist/vanilla.js"></size-elm></p>
   <vanilla-empty text="Hello from Vanilla JS"></vanilla-empty>
 
-  <h3>Polymer</h3>
-  <p><size-elm src="dist/polymer3.js"></size-elm></p>
-  <polymer3-empty text="Hello from Polymer 3"></polymer3-empty>
-
-  <h3>Lit-Element</h3>
+<h3>Lit-Element</h3>
   <p><size-elm src="dist/lit-element.js"></size-elm></p>
   <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
 

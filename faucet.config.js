@@ -3,11 +3,7 @@ module.exports = {
     source: "./src/vanilla.js",
     target: "./dist/vanilla.js"
   },
-  {
-    source: "./src/polymer3.js",
-    target: "./dist/polymer3.js"
-  },
-  {
+{
     source: "./src/lit-element.js",
     target: "./dist/lit-element.js"
   },

@@ -5,15 +5,14 @@
     "stencil": "stencil build --config stencil.config.ts"
   },
   "dependencies": {
-    "@polymer/polymer": ">=3.5.0",
-    "@stencil/core": ">=2.15.2",
-    "faucet-pipeline-esnext": "^2.1.8",
-    "faucet-pipeline-js": "^2.1.8",
-    "faucet-pipeline-jsx": "^2.1.8",
-    "faucet-pipeline-static": ">=2.0.0",
-    "faucet-pipeline-typescript": ">=2.1.8",
-    "lit-element": ">=3.2.0",
-    "pako": ">=2.0.4",
-    "preact-custom-element": ">=4"
+"@stencil/core": ">=4.43.4",
+    "faucet-pipeline-esnext": "^3.0.2",
+    "faucet-pipeline-js": "^3.0.2",
+    "faucet-pipeline-jsx": "^3.0.2",
+    "faucet-pipeline-static": ">=2.1.0",
+    "faucet-pipeline-typescript": ">=3.0.2",
+    "lit-element": ">=4.2.2",
+    "pako": ">=2.1.0",
+    "preact-custom-element": ">=4.6.0"
   }
 }

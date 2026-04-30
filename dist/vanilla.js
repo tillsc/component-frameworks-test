@@ -1,6 +1,3 @@
-(function () {
-'use strict';
-
 class EmptyComponent extends HTMLElement {
 
   constructor() {
@@ -33,5 +30,3 @@ class EmptyComponent extends HTMLElement {
 }
 
 customElements.define('vanilla-empty', EmptyComponent);
-
-})();
