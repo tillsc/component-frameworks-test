@@ -18,6 +18,12 @@ module.exports = {
     jsx: { pragma: "h" }
   },
   {
+    source: "./src/preact-custom-element-cdn.jsx",
+    target: "./dist/preact-custom-element-cdn.js",
+    jsx: { pragma: "h" },
+    externals: { preact: "preact" }
+  },
+  {
     source: "./src/util/size-elem.js",
     target: "./dist/util/size-elem.js"
   }]

@@ -2,10 +2,19 @@
 
 <head>
   <link rel="icon" href="data:image/png;base64,iVBORw0KGgo=">
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "https://cdn.jsdelivr.net/npm/preact@10.0.5/dist/preact.module.js"
+    }
+  }
+  </script>
   <script type="module" src="dist/vanilla.js"></script>
   <script type="module" src="dist/lit-element.js"></script>
+  <script type="module" src="src/lit-element-cdn.js"></script>
   <script type="module" src="dist/preact-vanilla.js"></script>
   <script type="module" src="dist/preact-custom-element.js"></script>
+  <script type="module" src="dist/preact-custom-element-cdn.js"></script>
   <script src="dist/svelte.js"></script>
   <script type="module">
     import { defineCustomElement } from './dist/stencil/stencil-empty.js';
@@ -14,6 +23,13 @@
   <script src="dist/angular/runtime.js"></script>
   <script src="dist/angular/main.js"></script>
   <script type="module" src="dist/util/size-elem.js"></script>
+  <style>
+    .side-by-side {
+      display: flex;
+      gap: 2em;
+      flex-wrap: wrap;
+    }
+  </style>
 </head>
 
 <body>
@@ -21,9 +37,18 @@
   <p><size-elm src="dist/vanilla.js"></size-elm></p>
   <vanilla-empty text="Hello from Vanilla JS"></vanilla-empty>
 
-<h3>Lit-Element</h3>
-  <p><size-elm src="dist/lit-element.js"></size-elm></p>
-  <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
+<div class="side-by-side">
+  <div>
+    <h3>Lit-Element</h3>
+    <p><size-elm src="dist/lit-element.js"></size-elm></p>
+    <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
+  </div>
+  <div>
+    <h3>Lit-Element (Lit 2 via CDN)</h3>
+    <p><size-elm src="src/lit-element-cdn.js"></size-elm> + Lit 2 from CDN</p>
+    <lit-element-cdn-empty text="Hello from Lit-Element CDN"></lit-element-cdn-empty>
+  </div>
+</div>
 
   <h3>Angular Elements</h3>
   <ul>
@@ -43,13 +68,22 @@
   </ul>
   <stencil-empty text="Hello from Stencil"></stencil-empty>
 
-  <h3>preact-custom-element</h3>
-  <p><size-elm src="dist/preact-custom-element.js"></size-elm></p>
-  <preact-custom-element-empty text="Hello from preact-custom-element"></preact-custom-element-empty>
-
   <h3>Preact "vanilla"</h3>
   <p><size-elm src="dist/preact-vanilla.js"></size-elm></p>
   <preact-vanilla-empty text="Hello from Preact"></preact-vanilla-empty>
+
+  <div class="side-by-side">
+    <div>
+      <h3>preact-custom-element</h3>
+      <p><size-elm src="dist/preact-custom-element.js"></size-elm></p>
+      <preact-custom-element-empty text="Hello from preact-custom-element"></preact-custom-element-empty>
+    </div>
+    <div>
+      <h3>preact-custom-element (Preact 10.0.5 from CDN)</h3>
+      <p><size-elm src="dist/preact-custom-element-cdn.js"></size-elm> + Preact 10.0.5 from CDN</p>
+      <preact-custom-element-cdn-empty text="Hello from preact-custom-element CDN"></preact-custom-element-cdn-empty>
+    </div>
+  </div>
 </body>
 
 </html>
