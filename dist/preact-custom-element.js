@@ -431,14 +431,17 @@ function v(e, n, o) {
   return !d && n && (e.innerHTML = ""), k(n || e.nodeName.toLowerCase(), i, h);
 }
 
+const version = "10.29.1";
+
 const styles = `:host  {
+  display: inline-block;
   border: 1px solid red; 
   padding: 0.5em; 
 }`;
 const PreactCustomElementEmpty = ({
   text
 }) => {
-  return k(S, null, k("style", null, styles), text);
+  return k(S, null, k("style", null, styles), text, k("br", null), k("small", null, "Preact ", version));
 };
 c(PreactCustomElementEmpty, 'preact-custom-element-empty', ['text'], {
   shadow: true

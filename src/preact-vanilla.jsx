@@ -1,4 +1,5 @@
 import { h, render } from 'preact';
+import { version } from './preact-version.js';
 
 class PreactEmpty extends HTMLElement {
   connectedCallback() {
@@ -7,8 +8,8 @@ class PreactEmpty extends HTMLElement {
     let text = this.getAttribute('text');
 
     render(<span>
-      <style>:host  {'{'} border: 1px solid red; padding: 0.5em; {'}'} </style>
-      {text}
+      <style>:host  {'{'} display: inline-block; border: 1px solid red; padding: 0.5em; {'}'} </style>
+      {text}<br/><small>Preact {version}</small>
     </span>, mountPoint);
   }
 }

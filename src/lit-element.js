@@ -1,4 +1,5 @@
 import {LitElement, html} from 'lit-element';
+import {version} from './lit-element-version.js';
 
 class LitElementEmpty extends LitElement {
 
@@ -15,8 +16,8 @@ class LitElementEmpty extends LitElement {
 
   render() {
     return html`
-    <style>:host { border: 1px solid red; padding: 0.5em; }</style>
-    ${this.text}
+    <style>:host { display: inline-block; border: 1px solid red; padding: 0.5em; }</style>
+    ${this.text}<br><small>Lit ${version}</small>
   `
   }
 

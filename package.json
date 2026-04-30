@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "precompile": "node scripts/generate-versions.js",
     "compile": "faucet",
     "watch": "faucet --watch",
     "stencil": "stencil build --config stencil.config.ts"

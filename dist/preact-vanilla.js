@@ -308,6 +308,8 @@ n = w.slice, l = {
   return n.__v.__b - l.__v.__b;
 }, H.__r = 0, f = Math.random().toString(8), c = "__d" + f, s = "__a" + f, a = /(PointerCapture)$|Capture$/i, h = 0, p = V(false), v = V(true);
 
+const version = "10.29.1";
+
 class PreactEmpty extends HTMLElement {
   connectedCallback() {
     const mountPoint = document.createElement('span');
@@ -315,7 +317,7 @@ class PreactEmpty extends HTMLElement {
       mode: 'open'
     }).appendChild(mountPoint);
     let text = this.getAttribute('text');
-    R(k("span", null, k("style", null, ":host  ", '{', " border: 1px solid red; padding: 0.5em; ", '}', " "), text), mountPoint);
+    R(k("span", null, k("style", null, ":host  ", '{', " display: inline-block; border: 1px solid red; padding: 0.5em; ", '}', " "), text, k("br", null), k("small", null, "Preact ", version)), mountPoint);
   }
 }
 customElements.define('preact-vanilla-empty', PreactEmpty);

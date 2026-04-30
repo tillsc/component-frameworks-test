@@ -24,6 +24,8 @@ const t=globalThis,i$1=t=>t,s$1=t.trustedTypes,e=s$1?s$1.createPolicy("lit-html"
  * SPDX-License-Identifier: BSD-3-Clause
  */const s=globalThis;class i extends y$1{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0;}createRenderRoot(){const t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){const r=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=D(r,this.renderRoot,this.renderOptions);}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(true);}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(false);}render(){return E}}i._$litElement$=true,i["finalized"]=true,s.litElementHydrateSupport?.({LitElement:i});const o=s.litElementPolyfillSupport;o?.({LitElement:i});(s.litElementVersions??=[]).push("4.2.2");
 
+const version = "4.2.2";
+
 class LitElementEmpty extends i {
 
   static get properties() {
@@ -39,8 +41,8 @@ class LitElementEmpty extends i {
 
   render() {
     return b`
-    <style>:host { border: 1px solid red; padding: 0.5em; }</style>
-    ${this.text}
+    <style>:host { display: inline-block; border: 1px solid red; padding: 0.5em; }</style>
+    ${this.text}<br><small>Lit ${version}</small>
   `
   }
 
