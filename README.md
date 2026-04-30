@@ -1,24 +1,41 @@
-See https://tillsc.github.io/component-frameworks-test/ for results
+A comparison of Web Component frameworks, measuring bundle size for a minimal custom element implementation each.
 
-## Build dist
+See https://tillsc.github.io/component-frameworks-test/ for results.
 
-    npm install
+## Frameworks compared
 
-    ./node_modules/.bin/faucet
+- Vanilla (no framework)
+- Lit Element
+- Preact (manual + via `preact-custom-element`)
+- Stencil
+- Angular Elements
+- Svelte
 
-### Not natively buildable stuff
+## Build
 
-Build stencil component by running
+```
+npm install
+npm run compile
+```
 
-    npm run stencil
+### CLI-based builds
 
-Build Angular component:
+These frameworks require their own build toolchain and must be built separately:
 
-    cd cli_based_builds/angular
-    npm run build
-    npm run package
+**Stencil:**
+```
+npm run stencil
+```
 
-Build svelte component:
+**Angular:**
+```
+cd cli_based_builds/angular
+npm run build
+npm run package
+```
 
-    cd cli_based_builds/svelte
-    npm run build
+**Svelte:**
+```
+cd cli_based_builds/svelte
+npm run build
+```
