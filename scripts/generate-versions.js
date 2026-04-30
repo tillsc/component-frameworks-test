@@ -5,6 +5,7 @@ const { resolve } = require('path');
 const packages = {
   'preact': 'src/preact-version.js',
   'lit-element': 'src/lit-element-version.js',
+  '@stencil/core': 'src/stencil-version.js',
 };
 
 for (const [pkg, outFile] of Object.entries(packages)) {

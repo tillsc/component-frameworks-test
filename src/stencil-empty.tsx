@@ -1,13 +1,15 @@
-import { Component, Prop } from '@stencil/core';
+import { Component, Prop, h } from '@stencil/core';
+import { version } from './stencil-version.js';
 
 @Component({
   tag: 'stencil-empty',
-  styleUrl: 'stencil-empty.css'
+  styleUrl: 'stencil-empty.css',
+  shadow: true
 })
 export class StencilComponent {
   @Prop() text: string;
 
   render() {
-    return <span class="foo">{this.text}</span>;
+    return <span>{this.text}<br/><small>Stencil {version}</small></span>;
   }
 }

@@ -6,9 +6,10 @@ export const config: Config = {
   namespace: 'stencil-empty',
   outputTargets: [
     {
-      type: 'dist',
+      type: 'dist-custom-elements',
       dir: 'dist/stencil',
-      empty: false
+      minify: true,
+      externalRuntime: false
     }
   ]
 };

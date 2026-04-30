@@ -7,7 +7,10 @@
   <script type="module" src="dist/preact-vanilla.js"></script>
   <script type="module" src="dist/preact-custom-element.js"></script>
   <script src="dist/svelte.js"></script>
-  <script src="dist/stencil/stencil-empty.js"></script>
+  <script type="module">
+    import { defineCustomElement } from './dist/stencil/stencil-empty.js';
+    defineCustomElement();
+  </script>
   <script src="dist/angular/runtime.js"></script>
   <script src="dist/angular/main.js"></script>
   <script type="module" src="dist/util/size-elem.js"></script>
@@ -35,9 +38,8 @@
 
   <h3>Stencil</h3>
   <ul>
-    <li>Loader: <size-elm src="dist/stencil/stencil-empty.js"></size-elm></li>
-    <li>Core: <size-elm src="dist/stencil/stencil-empty/stencil-empty.core.js"></size-elm></li>
-    <li>Component: <size-elm src="dist/stencil/stencil-empty/stencil-empty.entry.js"></size-elm></li>
+    <li>Runtime: <size-elm src="dist/stencil/index.js"></size-elm></li>
+    <li>Component: <size-elm src="dist/stencil/stencil-empty.js"></size-elm></li>
   </ul>
   <stencil-empty text="Hello from Stencil"></stencil-empty>
 

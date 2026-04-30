@@ -1,8 +1,5 @@
 :host {
   display: inline-block;
-}
-
-.foo {
   border: 1px solid red;
   padding: 0.5em;
 }
