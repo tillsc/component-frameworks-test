@@ -1,12 +1,12 @@
-import { enableProdMode } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { createApplication } from '@angular/platform-browser';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { createCustomElement } from '@angular/elements';
+import { AngularEmptyComponent } from './app/angular-empty/angular-empty.component';
 
-import { AppModule } from './app/app.module';
-import { environment } from './environments/environment';
-
-if (environment.production) {
-  enableProdMode();
-}
-
-platformBrowserDynamic().bootstrapModule(AppModule)
-  .catch(err => console.error(err));
+(async () => {
+  const app = await createApplication({
+    providers: [provideZonelessChangeDetection()]
+  });
+  const el = createCustomElement(AngularEmptyComponent, { injector: app.injector });
+  customElements.define('angular-empty', el);
+})();

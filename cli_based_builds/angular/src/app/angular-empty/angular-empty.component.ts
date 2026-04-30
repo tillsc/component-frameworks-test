@@ -1,12 +1,12 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, VERSION } from '@angular/core';
 
 @Component({
+  standalone: true,
   selector: 'angular-empty',
   templateUrl: './angular-empty.component.html',
   styleUrls: ['./angular-empty.component.css']
 })
 export class AngularEmptyComponent {
-  @Input() text: String;
-  constructor() { }
-
+  @Input() text: string = '';
+  version = VERSION.full;
 }

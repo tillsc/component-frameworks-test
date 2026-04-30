@@ -9,7 +9,8 @@
   <script src="dist/preact-custom-element.js"></script>
   <script src="dist/svelte.js"></script>
   <script src="dist/stencil/stencil-empty.js"></script>
-  <script src="dist/angular.js"></script>
+  <script src="dist/angular/runtime.js"></script>
+  <script src="dist/angular/main.js"></script>
   <script src="dist/util/size-elem.js"></script>
 </head>
 
@@ -27,7 +28,10 @@
   <lit-element-empty text="Hello from Lit-Element"></lit-element-empty>
 
   <h3>Angular Elements</h3>
-  <p><size-elm src="dist/angular.js"></size-elm></p>
+  <ul>
+    <li>Runtime (webpack): <size-elm src="dist/angular/runtime.js"></size-elm></li>
+    <li>Main (Angular platform + component): <size-elm src="dist/angular/main.js"></size-elm></li>
+  </ul>
   <angular-empty text="Hello from Angular Elements"></angular-empty>
 
   <h3>Svelte</h3>
